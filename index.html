@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BoshaChat</title>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      background: #f4f4f4;
+    }
+
+    #sidebar {
+      width: 250px;
+      background: #FF9500;
+      color: white;
+      padding: 15px;
+    }
+
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+    }
+
+    #inputArea {
+      display: flex;
+      padding: 10px;
+      background: #00A6FF;
+    }
+
+    #inputArea input {
+      flex: 1;
+      padding: 8px;
+    }
+
+    button {
+      background: white;
+      border: none;
+      padding: 8px 12px;
+      margin-left: 5px;
+      cursor: pointer;
+    }
+
+    #loginBox {
+      margin: auto;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loginBox">
+  <h2>Login</h2>
+  <input id="email" placeholder="Email"><br><br>
+  <input id="password" type="password" placeholder="Password"><br><br>
+  <button onclick="login()">Login</button>
+  <p id="loginError" style="color:red;"></p>
+</div>
+
+<div id="app" style="display:none; width:100%;">
+
+  <div id="sidebar">
+    <h3>Chats</h3>
+    <button onclick="loadGlobal()">Global Chat</button>
+    <br><br>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div id="main">
+    <div id="messages"></div>
+
+    <div id="inputArea">
+      <input id="messageInput" placeholder="Type message...">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBqLckLS5qxKZ06S0fsbQS_mWPVFi4E00w",
+    authDomain: "boshachat-acbbc.firebaseapp.com",
+    projectId: "boshachat-acbbc",
+    storageBucket: "boshachat-acbbc.firebasestorage.app",
+    messagingSenderId: "732701616574",
+    appId: "1:732701616574:web:abeb808acd5d5bbb3a71ef"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const loginBox = document.getElementById("loginBox");
+  const appDiv = document.getElementById("app");
+  const messagesDiv = document.getElementById("messages");
+
+  window.login = function() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    signInWithEmailAndPassword(auth, email, password)
+      .catch(err => {
+        document.getElementById("loginError").innerText = err.message;
+      });
+  }
+
+  window.logout = function() {
+    signOut(auth);
+  }
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      loginBox.style.display = "none";
+      appDiv.style.display = "flex";
+      loadGlobal();
+    } else {
+      loginBox.style.display = "block";
+      appDiv.style.display = "none";
+    }
+  });
+
+  let unsubscribe;
+
+  window.loadGlobal = function() {
+    if (unsubscribe) unsubscribe();
+
+    const q = query(collection(db, "globalChat"), orderBy("timestamp"));
+    unsubscribe = onSnapshot(q, snapshot => {
+      messagesDiv.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        messagesDiv.innerHTML += `<div><b>${data.user}</b>: ${data.text}</div>`;
+      });
+    });
+  }
+
+  window.sendMessage = async function() {
+    const input = document.getElementById("messageInput");
+    if (!input.value) return;
+
+    await addDoc(collection(db, "globalChat"), {
+      user: auth.currentUser.email,
+      text: input.value,
+      timestamp: Date.now()
+    });
+
+    input.value = "";
+  }
+
+</script>
+
+</body>
+</html>
