@@ -12,10 +12,15 @@
     }
 
     #sidebar {
-      width: 250px;
+      width: 260px;
       background: #FF9500;
       color: white;
       padding: 15px;
+    }
+
+    #sidebar h1 {
+      margin-top: 0;
+      font-size: 28px;
     }
 
     #main {
@@ -45,8 +50,9 @@
       background: white;
       border: none;
       padding: 8px 12px;
-      margin-left: 5px;
+      margin: 5px 0;
       cursor: pointer;
+      width: 100%;
     }
 
     #loginBox {
@@ -68,9 +74,22 @@
 <div id="app" style="display:none; width:100%;">
 
   <div id="sidebar">
-    <h3>Chats</h3>
-    <button onclick="loadGlobal()">Global Chat</button>
-    <br><br>
+    <h1>BoshaChat</h1>
+
+    <button onclick="loadChat('global')">🌍 Global Chat</button>
+
+    <hr>
+
+    <button onclick="createDM()">➕ New DM</button>
+    <div id="dmList"></div>
+
+    <hr>
+
+    <button onclick="createGroup()">👥 New Group</button>
+    <div id="groupList"></div>
+
+    <hr>
+
     <button onclick="logout()">Logout</button>
   </div>
 
@@ -86,80 +105,222 @@
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, getDocs, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBqLckLS5qxKZ06S0fsbQS_mWPVFi4E00w",
-    authDomain: "boshachat-acbbc.firebaseapp.com",
-    projectId: "boshachat-acbbc",
-    storageBucket: "boshachat-acbbc.firebasestorage.app",
-    messagingSenderId: "732701616574",
-    appId: "1:732701616574:web:abeb808acd5d5bbb3a71ef"
-  };
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_ID"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  const loginBox = document.getElementById("loginBox");
-  const appDiv = document.getElementById("app");
-  const messagesDiv = document.getElementById("messages");
+let currentChatId = "global";
+let unsubscribe;
 
-  window.login = function() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+const loginBox = document.getElementById("loginBox");
+const appDiv = document.getElementById("app");
+const messagesDiv = document.getElementById("messages");
+const dmList = document.getElementById("dmList");
+const groupList = document.getElementById("groupList");
 
-    signInWithEmailAndPassword(auth, email, password)
-      .catch(err => {
-        document.getElementById("loginError").innerText = err.message;
-      });
+const inviteSection = document.createElement("div");
+inviteSection.innerHTML = "<hr><h3>📨 Invites</h3>";
+document.getElementById("sidebar").insertBefore(inviteSection, dmList);
+
+window.login = function() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  signInWithEmailAndPassword(auth, email, password)
+    .catch(err => {
+      document.getElementById("loginError").innerText = err.message;
+    });
+}
+
+window.logout = function() {
+  signOut(auth);
+}
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    loginBox.style.display = "none";
+    appDiv.style.display = "flex";
+    await ensureGlobalExists();
+    loadChat("global");
+    loadChats();
+    loadInvites();
+    await migrateGlobalChat();
+  } else {
+    loginBox.style.display = "block";
+    appDiv.style.display = "none";
+  }
+});
+
+async function migrateGlobalChat() {
+  const oldSnapshot = await getDocs(collection(db, "globalChat"));
+
+  for (const docSnap of oldSnapshot.docs) {
+    const data = docSnap.data();
+
+    await addDoc(collection(db, "chats", "global", "messages"), {
+      user: data.user,
+      text: data.text,
+      timestamp: data.timestamp
+    });
   }
 
-  window.logout = function() {
-    signOut(auth);
-  }
+  console.log("Migration complete!");
+}
 
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      loginBox.style.display = "none";
-      appDiv.style.display = "flex";
-      loadGlobal();
-    } else {
-      loginBox.style.display = "block";
-      appDiv.style.display = "none";
-    }
+async function ensureGlobalExists() {
+  await setDoc(doc(db, "chats", "global"), { type: "global" }, { merge: true });
+}
+
+window.loadChat = function(chatId) {
+  currentChatId = chatId;
+  if (unsubscribe) unsubscribe();
+
+  const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp"));
+
+  unsubscribe = onSnapshot(q, snapshot => {
+    messagesDiv.innerHTML = "";
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      messagesDiv.innerHTML += `<div><b>${data.user}</b>: ${data.text}</div>`;
+    });
+  });
+}
+
+window.sendMessage = async function() {
+  const input = document.getElementById("messageInput");
+  if (!input.value) return;
+
+  await addDoc(collection(db, "chats", currentChatId, "messages"), {
+    user: auth.currentUser.email,
+    text: input.value,
+    timestamp: Date.now()
   });
 
-  let unsubscribe;
+  input.value = "";
+}
 
-  window.loadGlobal = function() {
-    if (unsubscribe) unsubscribe();
+window.createDM = async function() {
+  const email = prompt("Enter email for DM:");
+  if (!email) return;
 
-    const q = query(collection(db, "globalChat"), orderBy("timestamp"));
-    unsubscribe = onSnapshot(q, snapshot => {
-      messagesDiv.innerHTML = "";
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        messagesDiv.innerHTML += `<div><b>${data.user}</b>: ${data.text}</div>`;
-      });
+  const chatRef = await addDoc(collection(db, "chats"), {
+    type: "dm",
+    members: [auth.currentUser.email]
+  });
+
+  await addDoc(collection(db, "invites"), {
+    chatId: chatRef.id,
+    from: auth.currentUser.email,
+    to: email,
+    type: "dm",
+    status: "pending"
+  });
+}
+
+window.createGroup = async function() {
+  const name = prompt("Group name:");
+  if (!name) return;
+
+  const membersInput = prompt("Enter member emails separated by commas:");
+  if (!membersInput) return;
+
+  const chatRef = await addDoc(collection(db, "chats"), {
+    type: "group",
+    name: name,
+    members: [auth.currentUser.email]
+  });
+
+  const members = membersInput.split(",").map(e => e.trim());
+
+  for (const member of members) {
+    await addDoc(collection(db, "invites"), {
+      chatId: chatRef.id,
+      from: auth.currentUser.email,
+      to: member,
+      type: "group",
+      groupName: name,
+      status: "pending"
     });
   }
+}
 
-  window.sendMessage = async function() {
-    const input = document.getElementById("messageInput");
-    if (!input.value) return;
+async function loadChats() {
+  const snapshot = await getDocs(collection(db, "chats"));
+  dmList.innerHTML = "";
+  groupList.innerHTML = "";
 
-    await addDoc(collection(db, "globalChat"), {
-      user: auth.currentUser.email,
-      text: input.value,
-      timestamp: Date.now()
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    if (!data.members || !data.members.includes(auth.currentUser.email)) return;
+
+    if (data.type === "dm") {
+      const btn = document.createElement("button");
+      btn.innerText = "DM Chat";
+      btn.onclick = () => loadChat(docSnap.id);
+      dmList.appendChild(btn);
+    }
+
+    if (data.type === "group") {
+      const btn = document.createElement("button");
+      btn.innerText = "👥 " + data.name;
+      btn.onclick = () => loadChat(docSnap.id);
+      groupList.appendChild(btn);
+    }
+  });
+}
+
+function loadInvites() {
+  onSnapshot(collection(db, "invites"), snapshot => {
+    inviteSection.innerHTML = "<hr><h3>📨 Invites</h3>";
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.to !== auth.currentUser.email || data.status !== "pending") return;
+
+      const div = document.createElement("div");
+      div.style.background = "white";
+      div.style.padding = "5px";
+      div.style.marginBottom = "5px";
+
+      div.innerHTML = `
+        <small>${data.type === "dm" ? "DM" : "Group"} from ${data.from}</small><br>
+      `;
+
+      const acceptBtn = document.createElement("button");
+      acceptBtn.innerText = "Accept";
+      acceptBtn.onclick = async () => {
+        const chatRef = doc(db, "chats", data.chatId);
+        const chatSnap = await getDocs(query(collection(db, "chats")));
+        await updateDoc(chatRef, {
+          members: [...new Set([... (chatSnap.docs.find(d => d.id === data.chatId).data().members), auth.currentUser.email])]
+        });
+
+        await deleteDoc(doc(db, "invites", docSnap.id));
+        loadChats();
+      };
+
+      const declineBtn = document.createElement("button");
+      declineBtn.innerText = "Decline";
+      declineBtn.onclick = async () => {
+        await deleteDoc(doc(db, "invites", docSnap.id));
+      };
+
+      div.appendChild(acceptBtn);
+      div.appendChild(declineBtn);
+      inviteSection.appendChild(div);
     });
-
-    input.value = "";
-  }
-
+  });
+}
 </script>
 
 </body>
