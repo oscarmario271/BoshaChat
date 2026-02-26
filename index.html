@@ -132,7 +132,7 @@ const hr = document.getElementById("invites");
 const groupList = document.getElementById("groupList");
 
 const inviteSection = document.createElement("div");
-inviteSection.innerHTML = "<h3>📨 Invites</h3>";
+inviteSection.innerHTML = "<hr><h3>📨 Invites</h3>";
 document.getElementById("sidebar").insertBefore(inviteSection, hr);
 
 window.login = function() {
@@ -267,7 +267,7 @@ async function loadChats() {
 
 function loadInvites() {
   onSnapshot(collection(db, "invites"), snapshot => {
-    inviteSection.innerHTML = "<h3>📨 Invites</h3>";
+    inviteSection.innerHTML = "<hr><h3>📨 Invites</h3>";
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
