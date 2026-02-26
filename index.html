@@ -157,28 +157,11 @@ onAuthStateChanged(auth, async user => {
     loadChat("global");
     loadChats();
     loadInvites();
-    await migrateGlobalChat();
   } else {
     loginBox.style.display = "block";
     appDiv.style.display = "none";
   }
 });
-
-async function migrateGlobalChat() {
-  const oldSnapshot = await getDocs(collection(db, "globalChat"));
-
-  for (const docSnap of oldSnapshot.docs) {
-    const data = docSnap.data();
-
-    await addDoc(collection(db, "chats", "global", "messages"), {
-      user: data.user,
-      text: data.text,
-      timestamp: data.timestamp
-    });
-  }
-
-  console.log("Migration complete!");
-}
 
 async function ensureGlobalExists() {
   await setDoc(doc(db, "chats", "global"), { type: "global" }, { merge: true });
