@@ -83,7 +83,7 @@
     <button onclick="createDM()">➕ New DM</button>
     <div id="dmList"></div>
 
-    <hr>
+    <hr id="invites">
 
     <button onclick="createGroup()">👥 New Group</button>
     <div id="groupList"></div>
@@ -128,12 +128,12 @@ let unsubscribe;
 const loginBox = document.getElementById("loginBox");
 const appDiv = document.getElementById("app");
 const messagesDiv = document.getElementById("messages");
-const dmList = document.getElementById("dmList");
+const hr = document.getElementById("invites");
 const groupList = document.getElementById("groupList");
 
 const inviteSection = document.createElement("div");
 inviteSection.innerHTML = "<h3>📨 Invites</h3>";
-document.getElementById("sidebar").insertAfter(inviteSection, dmList);
+document.getElementById("sidebar").insertBefore(inviteSection, hr);
 
 window.login = function() {
   const email = document.getElementById("email").value;
