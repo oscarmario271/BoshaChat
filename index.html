@@ -133,7 +133,7 @@ const groupList = document.getElementById("groupList");
 
 const inviteSection = document.createElement("div");
 inviteSection.innerHTML = "<h3>📨 Invites</h3>";
-document.getElementById("sidebar").insertBefore(inviteSection, dmList);
+document.getElementById("sidebar").insertAfter(inviteSection, dmList);
 
 window.login = function() {
   const email = document.getElementById("email").value;
