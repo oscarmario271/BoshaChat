@@ -267,7 +267,7 @@ async function loadChats() {
 
 function loadInvites() {
   onSnapshot(collection(db, "invites"), snapshot => {
-    inviteSection.innerHTML = "<hr><h3>📨 Invites</h3>";
+    inviteSection.innerHTML = "<h3>📨 Invites</h3>";
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
