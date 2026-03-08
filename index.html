@@ -257,7 +257,6 @@ window.loadChat = function(chatId) {
     const data = docSnap.data();
 
     const name =
-      data.displayName ||
       userCache[data.user] ||
       data.user.split("@")[0];
 
