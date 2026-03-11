@@ -251,6 +251,8 @@ window.loadChat = function(chatId) {
     orderBy("timestamp")
   );
 
+  const messageSound = new Audio("ping.mp3");
+
   unsubscribeMessages = onSnapshot(q, snapshot => {
   messagesDiv.innerHTML = "";
 
@@ -263,6 +265,19 @@ window.loadChat = function(chatId) {
 
     messagesDiv.innerHTML +=
       `<div><b>${name}</b>: ${data.text}</div>`;
+  });
+
+  snapshot.docChanges().forEach(change => {
+
+    if (change.type === "added") {
+      const data = change.doc.data();
+
+      if (data.user !== auth.currentUser.email) {
+        messageSound.play();
+      }
+
+    }
+
   });
 
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
