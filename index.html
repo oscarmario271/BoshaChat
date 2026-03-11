@@ -5,7 +5,7 @@
   <link href="https://fonts.googleapis.com/css?family=Fredoka+One" rel="stylesheet">
   <style>
     body {
-      font-family: Arial;
+      font-family: Segoe UI;
       margin: 0;
       display: flex;
       height: 100vh;
@@ -51,6 +51,7 @@
     }
 
     button {
+	  font-family: Segoe UI;
       background: white;
       border: none;
       padding: 8px 12px;
@@ -250,6 +251,8 @@ window.loadChat = function(chatId) {
     orderBy("timestamp")
   );
 
+  const messageSound = new Audio("ping.mp3");
+
   unsubscribeMessages = onSnapshot(q, snapshot => {
   messagesDiv.innerHTML = "";
 
@@ -262,6 +265,19 @@ window.loadChat = function(chatId) {
 
     messagesDiv.innerHTML +=
       `<div><b>${name}</b>: ${data.text}</div>`;
+  });
+
+  snapshot.docChanges().forEach(change => {
+
+    if (change.type === "added") {
+      const data = change.doc.data();
+
+      if (data.user !== auth.currentUser.email) {
+        messageSound.play();
+      }
+
+    }
+
   });
 
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
