@@ -240,6 +240,20 @@ window.loadChat = function(chatId) {
   currentChatId = chatId;
   messagesDiv.innerHTML = "";
 
+if (chatId !== "onlinePanel") {
+
+  const callBar = document.createElement("div");
+  callBar.style.padding = "5px";
+
+  callBar.innerHTML = `
+    <button onclick="startCall()">📞 Call</button>
+    <span id="incomingCall"></span>
+  `;
+
+  messagesDiv.appendChild(callBar);
+
+}
+
   if (unsubscribeMessages) unsubscribeMessages();
   if (unsubscribeTyping) unsubscribeTyping();
 
@@ -286,6 +300,7 @@ window.loadChat = function(chatId) {
 });
 
   watchTyping(chatId);
+  watchCalls(chatId);
 };
 
 /* ---------------- LOAD CHATS ------------------ */
@@ -429,6 +444,27 @@ window.changeDisplayName = async function() {
 
 /* ---------------- CALL PANEL ---------------- */
 
+function watchCalls(chatId) {
+
+  const callDoc = doc(db, "calls", chatId);
+
+  onSnapshot(callDoc, snap => {
+
+    const data = snap.data();
+
+    if (!data) return;
+
+    if (data.active && data.from !== auth.currentUser.email) {
+
+      document.getElementById("incomingCall").innerHTML =
+        `<button onclick="joinCall()">📞 Join Call</button>`;
+
+    }
+
+  });
+
+}
+
 let pc;
 let localStream;
 let callDoc;
@@ -486,6 +522,19 @@ window.startCallPanel = async function() {
 
 };
 
+window.startCall = async function() {
+
+  const callDoc = doc(db, "calls", currentChatId);
+
+  await setDoc(callDoc, {
+    from: auth.currentUser.email,
+    active: true
+  });
+
+  startCallPanel();
+
+}
+
 window.answerCall = async function() {
 
   currentChatId = "callPanel";
@@ -530,16 +579,21 @@ window.answerCall = async function() {
 
 };
 
-window.endCall = function() {
+window.joinCall = async function() {
 
-  if (pc) {
-    pc.close();
-    pc = null;
-  }
+  startCallPanel();
+
+}
+
+window.endCall = async function() {
+
+  if (pc) pc.close();
 
   if (localStream) {
     localStream.getTracks().forEach(track => track.stop());
   }
+
+  await deleteDoc(doc(db, "calls", currentChatId));
 
   document.getElementById("inputArea").style.display = "flex";
 
