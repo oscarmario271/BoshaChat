@@ -95,6 +95,7 @@
     <hr>
 
 	<button onclick="startCallPanel()">📞 Start Call</button>
+	<button onclick="answerCall()">📞 Join Call</button>
 	<button onclick="openSettings()">⚙ Settings</button><br>
     <button onclick="loadChat('onlinePanel')">🟢 Online Users</button>
     <button onclick="logout()">Logout</button>
@@ -430,6 +431,7 @@ window.changeDisplayName = async function() {
 
 let pc;
 let localStream;
+let callDoc;
 
 window.startCallPanel = async function() {
 
@@ -437,16 +439,15 @@ window.startCallPanel = async function() {
 
   messagesDiv.innerHTML = `
     <h3>📞 Voice Call</h3>
-    <p>Connecting microphone...</p>
+    <p>Starting call...</p>
     <audio id="remoteAudio" autoplay></audio>
     <br><br>
     <button onclick="endCall()">❌ End Call</button>
   `;
+
   document.getElementById("inputArea").style.display = "none";
 
-  localStream = await navigator.mediaDevices.getUserMedia({
-    audio: true
-  });
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
   pc = new RTCPeerConnection();
 
@@ -457,6 +458,75 @@ window.startCallPanel = async function() {
   pc.ontrack = e => {
     document.getElementById("remoteAudio").srcObject = e.streams[0];
   };
+
+  callDoc = doc(db, "calls", "global");
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  await setDoc(callDoc, {
+    offer: {
+      type: offer.type,
+      sdp: offer.sdp
+    }
+  });
+
+  onSnapshot(callDoc, async snapshot => {
+
+    const data = snapshot.data();
+
+    if (!pc.currentRemoteDescription && data?.answer) {
+
+      const answer = new RTCSessionDescription(data.answer);
+      await pc.setRemoteDescription(answer);
+
+    }
+
+  });
+
+};
+
+window.answerCall = async function() {
+
+  currentChatId = "callPanel";
+
+  messagesDiv.innerHTML = `
+    <h3>📞 Voice Call</h3>
+    <p>Joining call...</p>
+    <audio id="remoteAudio" autoplay></audio>
+    <br><br>
+    <button onclick="endCall()">❌ End Call</button>
+  `;
+
+  document.getElementById("inputArea").style.display = "none";
+
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  pc = new RTCPeerConnection();
+
+  localStream.getTracks().forEach(track => {
+    pc.addTrack(track, localStream);
+  });
+
+  pc.ontrack = e => {
+    document.getElementById("remoteAudio").srcObject = e.streams[0];
+  };
+
+  callDoc = doc(db, "calls", "global");
+
+  const callData = (await getDoc(callDoc)).data();
+
+  await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+
+  await updateDoc(callDoc, {
+    answer: {
+      type: answer.type,
+      sdp: answer.sdp
+    }
+  });
 
 };
 
@@ -470,6 +540,7 @@ window.endCall = function() {
   if (localStream) {
     localStream.getTracks().forEach(track => track.stop());
   }
+
   document.getElementById("inputArea").style.display = "flex";
 
   messagesDiv.innerHTML = "<h3>Call ended.</h3>";
