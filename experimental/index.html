@@ -93,7 +93,8 @@
     <div id="groupList"></div>
 
     <hr>
-	
+
+	<button onclick="startCallPanel()">📞 Start Call</button>
 	<button onclick="openSettings()">⚙ Settings</button><br>
     <button onclick="loadChat('onlinePanel')">🟢 Online Users</button>
     <button onclick="logout()">Logout</button>
@@ -425,6 +426,56 @@ window.changeDisplayName = async function() {
   alert("Updated!");
 }
 
+/* ---------------- CALL PANEL ---------------- */
+
+let pc;
+let localStream;
+
+window.startCallPanel = async function() {
+
+  currentChatId = "callPanel";
+
+  messagesDiv.innerHTML = `
+    <h3>📞 Voice Call</h3>
+    <p>Connecting microphone...</p>
+    <audio id="remoteAudio" autoplay></audio>
+    <br><br>
+    <button onclick="endCall()">❌ End Call</button>
+  `;
+  document.getElementById("inputArea").style.display = "none";
+
+  localStream = await navigator.mediaDevices.getUserMedia({
+    audio: true
+  });
+
+  pc = new RTCPeerConnection();
+
+  localStream.getTracks().forEach(track => {
+    pc.addTrack(track, localStream);
+  });
+
+  pc.ontrack = e => {
+    document.getElementById("remoteAudio").srcObject = e.streams[0];
+  };
+
+};
+
+window.endCall = function() {
+
+  if (pc) {
+    pc.close();
+    pc = null;
+  }
+
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+  }
+  document.getElementById("inputArea").style.display = "flex";
+
+  messagesDiv.innerHTML = "<h3>Call ended.</h3>";
+
+};
+	
 /* ---------------- INVITES / GROUPS / DMS ---------------- */
 /* YOUR ORIGINAL LOGIC BELOW UNCHANGED */
 
