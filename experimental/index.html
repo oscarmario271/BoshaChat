@@ -94,8 +94,6 @@
 
     <hr>
 
-	<button onclick="startCallPanel()">📞 Start Call</button>
-	<button onclick="answerCall()">📞 Join Call</button>
 	<button onclick="openSettings()">⚙ Settings</button><br>
     <button onclick="loadChat('onlinePanel')">🟢 Online Users</button>
     <button onclick="logout()">Logout</button>
@@ -113,6 +111,24 @@
 
 </div>
 
+<div id="callPopup" style="
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #00A6FF;
+  color: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  display: none;
+  z-index: 1000;
+">
+  <span id="callerName"></span> is calling...
+  <br><br>
+  <button id="answerCallBtn" style="background:white;color:#00A6FF;">📞 Answer</button>
+  <button id="declineCallBtn" style="background:red;color:white;">❌ Decline</button>
+</div>
+	
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
@@ -219,6 +235,7 @@ onAuthStateChanged(auth, async user => {
     loadChats();
     loadInvites();
     watchOnlineUsers();
+	watchIncomingCalls();
   } else {
     loginBox.style.display = "block";
     appDiv.style.display = "none";
@@ -315,19 +332,43 @@ async function loadChats() {
 
     if (!data.members || !data.members.includes(auth.currentUser.email)) return;
 
-    if (data.type === "dm") {
-      const btn = document.createElement("button");
-      btn.innerText = "DM Chat";
-      btn.onclick = () => loadChat(docSnap.id);
-      dmList.appendChild(btn);
-    }
+if (data.type === "dm") {
+  const btn = document.createElement("button");
+  btn.innerText = "DM Chat";
+  btn.onclick = () => loadChat(docSnap.id);
+  dmList.appendChild(btn);
 
-    if (data.type === "group") {
-      const btn = document.createElement("button");
-      btn.innerText = "👥 " + data.name;
-      btn.onclick = () => loadChat(docSnap.id);
-      groupList.appendChild(btn);
-    }
+  // --- ADD THIS CALL BUTTON ---
+  const callBtn = document.createElement("button");
+  callBtn.innerText = "📞 Call";
+  callBtn.onclick = async () => {
+    await setDoc(doc(db, "calls", docSnap.id), {
+      from: auth.currentUser.email,
+      active: true
+    });
+    startCallPanel();
+  };
+  dmList.appendChild(callBtn);
+}
+
+if (data.type === "group") {
+  const btn = document.createElement("button");
+  btn.innerText = "👥 " + data.name;
+  btn.onclick = () => loadChat(docSnap.id);
+  groupList.appendChild(btn);
+
+  // --- ADD THIS CALL BUTTON ---
+  const callBtn = document.createElement("button");
+  callBtn.innerText = "📞 Call";
+  callBtn.onclick = async () => {
+    await setDoc(doc(db, "calls", docSnap.id), {
+      from: auth.currentUser.email,
+      active: true
+    });
+    startCallPanel();
+  };
+  groupList.appendChild(callBtn);
+}
   });
 }
 
@@ -463,6 +504,34 @@ function watchCalls(chatId) {
 
   });
 
+}
+
+function watchIncomingCalls() {
+  const callsCollection = collection(db, "calls");
+
+  onSnapshot(callsCollection, snapshot => {
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+
+      if (data.active && data.from !== auth.currentUser.email) {
+        const popup = document.getElementById("callPopup");
+        popup.style.display = "block";
+
+        document.getElementById("callerName").innerText = data.from.split("@")[0];
+
+        document.getElementById("answerCallBtn").onclick = async () => {
+          popup.style.display = "none";
+          currentChatId = docSnap.id;
+          startCallPanel();
+        };
+
+        document.getElementById("declineCallBtn").onclick = async () => {
+          popup.style.display = "none";
+          await deleteDoc(doc(db, "calls", docSnap.id));
+        };
+      }
+    });
+  });
 }
 
 let pc;
