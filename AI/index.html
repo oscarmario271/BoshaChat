@@ -140,42 +140,13 @@ function addMessage(text, type) {
 }
 
 async function getAIResponse(message) {
-  try {
-    const response = await fetch(
-      "https://router.huggingface.co/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer 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",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "user",
-              content: message,
-            }
-          ],
-          model: "openai/gpt-oss-120b:fastest",
-        })
-      }
-    );
+  const response = await fetch("/.netlify/functions/chat", {
+    method: "POST",
+    body: JSON.stringify({ message })
+  });
 
-    // Sometimes HF returns an error object, so we check first
-    const data = await response.json();
-
-    if (data.error) return "Error from Hugging Face: " + data.error;
-
-    // Handle both array or object response
-    if (Array.isArray(data) && data[0]?.generated_text) return data[0].generated_text;
-    if (data.generated_text) return data.generated_text;
-
-    return "Sorry, I couldn't think of a response 😅";
-
-  } catch (err) {
-    console.error(err);
-    return "Error connecting to Hugging Face 😬";
-  }
+  const data = await response.json();
+  return data.reply;
 }
   
 async function send() {
