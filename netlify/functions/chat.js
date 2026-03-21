@@ -32,10 +32,18 @@ export async function handler(event) {
 
     const data = await response.json();
 
+    console.log("HF FULL RESPONSE:", JSON.stringify(data, null, 2));
+
+    let reply =
+      data.choices?.[0]?.message?.content ||
+      data.choices?.[0]?.text ||
+      data.generated_text ||
+      JSON.stringify(data);
+
     return {
       statusCode: 200,
       body: JSON.stringify({
-        reply: data.choices?.[0]?.message?.content || "No response 😅"
+        reply: reply || "No response 😅"
       })
     };
 
