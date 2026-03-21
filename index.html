@@ -334,7 +334,7 @@ window.sendMessage = async function() {
   await addDoc(collection(db, "chats", currentChatId, "messages"), {
     user: auth.currentUser.email,
     text: messageInput.value,
-    timestamp: Date.now,
+    timestamp: Date.now
   });
 
   messageInput.value = "";
