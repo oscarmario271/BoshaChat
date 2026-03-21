@@ -23,7 +23,8 @@ export async function handler(event) {
     );
 
     const data = await response.json();
-    console.log(data);
+    
+    console.log("HF RESPONSE:", JSON.stringify(data, null, 2));
 
     return {
       statusCode: 200,
