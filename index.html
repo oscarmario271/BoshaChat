@@ -308,10 +308,21 @@ async function loadChats() {
     const data = docSnap.data();
     if (!data.members || !data.members.includes(auth.currentUser.email)) return;
     if (data.type === "dm") {
-      const btn = document.createElement("button");
-      btn.innerText = "DM Chat";
-      btn.onclick = () => loadChat(docSnap.id);
-      dmList.appendChild(btn);
+
+  const otherUser = data.members.find(
+    m => m !== auth.currentUser.email
+  );
+
+  const display =
+    userCache[otherUser] ||
+    otherUser?.split("@")[0] ||
+    "DM";
+
+  const btn = document.createElement("button");
+  btn.innerText = "💬 " + display;
+  btn.onclick = () => loadChat(docSnap.id);
+
+  dmList.appendChild(btn);
     }
     if (data.type === "group") {
       const btn = document.createElement("button");
