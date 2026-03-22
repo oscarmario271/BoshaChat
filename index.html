@@ -3,7 +3,7 @@
 <head>
   <title>BoshaChat</title>
   <link href="https://fonts.googleapis.com/css?family=Fredoka+One" rel="stylesheet">
-  <link rel="icon" type="image/png" href="BoshaChat.png">
+  <link rel="icon" type="image/png" href="res/BoshaChat.png">
   <style>
     body {
       font-family: Segoe UI;
@@ -263,7 +263,7 @@ window.loadChat = function(chatId) {
     orderBy("timestamp")
   );
 
-  const messageSound = new Audio("ping.mp3");
+  const messageSound = new Audio("res/ping.mp3");
 
   unsubscribeMessages = onSnapshot(q, snapshot => {
   messagesDiv.innerHTML = "";
@@ -351,7 +351,7 @@ window.sendMessage = async function() {
 /* ---------------- TYPING SYSTEM ---------------- */
 
 let typingTimeout;
-const typingSound = new Audio("typing.mp3");
+const typingSound = new Audio("res/typing.mp3");
 
 messageInput.addEventListener("input", async () => {
   if (!auth.currentUser) return;
@@ -398,6 +398,7 @@ function watchTyping(chatId) {
 		  typingSound.play();
       } else {
         typingDiv.innerHTML = "";
+		  typingSound.pause();
       }
     }
   );
