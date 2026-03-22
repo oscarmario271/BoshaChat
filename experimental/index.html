@@ -3,9 +3,10 @@
 <head>
   <title>BoshaChat</title>
   <link href="https://fonts.googleapis.com/css?family=Fredoka+One" rel="stylesheet">
+  <link rel="icon" type="image/png" href="res/BoshaChat.png">
   <style>
     body {
-      font-family: Segoe UI;
+      font-family: 'Segoe UI', sans-serif;
       margin: 0;
       display: flex;
       height: 100vh;
@@ -13,7 +14,7 @@
     }
 
     #sidebar {
-      font-family: 'Fredoka One', sans-serif;
+	  font-family: 'Fredoka One', sans-serif;
       width: 260px;
       background: #FF9500;
       color: #00A6FF;
@@ -23,6 +24,7 @@
       height: 100vh;
       box-sizing: border-box;
     }
+
     #sidebar h1 {
 	  font-family: 'Fredoka One', sans-serif;
       margin-top: 0;
@@ -34,7 +36,8 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-    }
+	  overflow-wrap: break-word;
+	}
 
     #messages {
       flex: 1;
@@ -51,12 +54,14 @@
     #inputArea input {
       flex: 1;
       padding: 8px;
+	  border-radius: 10px;
     }
 
     button {
-	  font-family: Segoe UI;
+	  font-family: 'Segoe UI', sans-serif;
       background: white;
-      border: none;
+      border: 2px solid #00A6FF;
+	  border-radius: 10px;
       padding: 8px 12px;
       margin: 5px 0;
       cursor: pointer;
@@ -66,6 +71,10 @@
       margin: auto;
       text-align: center;
     }
+	#sendButton {
+	  border: 2px solid;
+	  border-radius: 10px;
+	}
   </style>
 </head>
 <body>
@@ -96,7 +105,7 @@
     <div id="groupList"></div>
 
     <hr>
-
+	
 	<button onclick="openSettings()">⚙ Settings</button><br>
     <button onclick="loadChat('onlinePanel')">🟢 Online Users</button>
     <button onclick="logout()">Logout</button>
@@ -107,31 +116,13 @@
 	<div id="typingIndicator" style="padding:5px;color:gray;"></div>
 
     <div id="inputArea">
-      <input id="messageInput" placeholder="Type message...">
-      <button onclick="sendMessage()">Send</button>
+      <input id="messageInput" placeholder="Type message..." onkeydown="if(event.key==='Enter') sendMessage()">
+      <button id="sendButton" onclick="sendMessage()">Send</button>
     </div>
   </div>
 
 </div>
 
-<div id="callPopup" style="
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #00A6FF;
-  color: white;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
-  display: none;
-  z-index: 1000;
-">
-  <span id="callerName"></span> is calling...
-  <br><br>
-  <button id="answerCallBtn" style="background:white;color:#00A6FF;">📞 Answer</button>
-  <button id="declineCallBtn" style="background:red;color:white;">❌ Decline</button>
-</div>
-	
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
@@ -238,7 +229,6 @@ onAuthStateChanged(auth, async user => {
     loadChats();
     loadInvites();
     watchOnlineUsers();
-	watchIncomingCalls();
   } else {
     loginBox.style.display = "block";
     appDiv.style.display = "none";
@@ -258,26 +248,7 @@ async function ensureGlobalExists() {
 
 window.loadChat = function(chatId) {
   currentChatId = chatId;
-  messagesDiv.innerHTML = `
-    <div style="padding:5px;">
-      <button onclick="startCall()">📞 Call</button>
-      <span id="incomingCall"></span>
-    </div>
-  `;
-	
-if (chatId !== "onlinePanel") {
-
-  const callBar = document.createElement("div");
-  callBar.style.padding = "5px";
-
-  callBar.innerHTML = `
-    <button onclick="startCall()">📞 Call</button>
-    <span id="incomingCall"></span>
-  `;
-
-  messagesDiv.appendChild(callBar);
-
-}
+  messagesDiv.innerHTML = "";
 
   if (unsubscribeMessages) unsubscribeMessages();
   if (unsubscribeTyping) unsubscribeTyping();
@@ -292,7 +263,7 @@ if (chatId !== "onlinePanel") {
     orderBy("timestamp")
   );
 
-  const messageSound = new Audio("ping.mp3");
+  const messageSound = new Audio("res/ping.mp3");
 
   unsubscribeMessages = onSnapshot(q, snapshot => {
   messagesDiv.innerHTML = "";
@@ -325,7 +296,6 @@ if (chatId !== "onlinePanel") {
 });
 
   watchTyping(chatId);
-  watchCalls(chatId);
 };
 
 /* ---------------- LOAD CHATS ------------------ */
@@ -334,53 +304,32 @@ async function loadChats() {
   const snapshot = await getDocs(collection(db, "chats"));
   dmList.innerHTML = "";
   groupList.innerHTML = "";
-
   snapshot.forEach(docSnap => {
     const data = docSnap.data();
-
     if (!data.members || !data.members.includes(auth.currentUser.email)) return;
+    if (data.type === "dm") {
 
-if (data.type === "dm") {
+  const otherUser = data.members.find(
+    m => m !== auth.currentUser.email
+  );
+
+  const display =
+    userCache[otherUser] ||
+    otherUser?.split("@")[0] ||
+    "DM";
+
   const btn = document.createElement("button");
-  btn.innerText = "DM Chat";
+  btn.innerText = "💬 " + display;
   btn.onclick = () => loadChat(docSnap.id);
+
   dmList.appendChild(btn);
-
-  // --- ADD THIS CALL BUTTON ---
-  const callBtn = document.createElement("button");
-  const break1 = document.createElement("br");
-  callBtn.innerText = "📞 Call";
-  callBtn.onclick = async () => {
-    await setDoc(doc(db, "calls", docSnap.id), {
-      from: auth.currentUser.email,
-      active: true
-    });
-    startCallPanel();
-  };
-  dmList.appendChild(callBtn);
-  dmList.appendChild(break1);
-}
-
-if (data.type === "group") {
-  const btn = document.createElement("button");
-  btn.innerText = "👥 " + data.name;
-  btn.onclick = () => loadChat(docSnap.id);
-  groupList.appendChild(btn);
-
-  // --- ADD THIS CALL BUTTON ---
-  const callBtn = document.createElement("button");
-  const break2 = document.createElement("br");
-  callBtn.innerText = "📞 Call";
-  callBtn.onclick = async () => {
-    await setDoc(doc(db, "calls", docSnap.id), {
-      from: auth.currentUser.email,
-      active: true
-    });
-    startCallPanel();
-  };
-  groupList.appendChild(callBtn);
-  groupList.appendChild(break2);
-}
+    }
+    if (data.type === "group") {
+      const btn = document.createElement("button");
+      btn.innerText = "👥 " + data.name;
+      btn.onclick = () => loadChat(docSnap.id);
+      groupList.appendChild(btn);
+    }
   });
 }
 
@@ -402,6 +351,7 @@ window.sendMessage = async function() {
 /* ---------------- TYPING SYSTEM ---------------- */
 
 let typingTimeout;
+const typingSound = new Audio("res/typing.mp3");
 
 messageInput.addEventListener("input", async () => {
   if (!auth.currentUser) return;
@@ -445,8 +395,10 @@ function watchTyping(chatId) {
       if (typingUsers.length > 0) {
         typingDiv.innerHTML =
           `<i>${typingUsers.join(", ")} is typing...</i>`;
+		  typingSound.play();
       } else {
         typingDiv.innerHTML = "";
+		  typingSound.pause();
       }
     }
   );
@@ -495,217 +447,6 @@ window.changeDisplayName = async function() {
   alert("Updated!");
 }
 
-/* ---------------- CALL PANEL ---------------- */
-
-function watchCalls(chatId) {
-
-  const callDoc = doc(db, "calls", chatId);
-
-  onSnapshot(callDoc, snap => {
-
-    const data = snap.data();
-
-    if (!data) return;
-
-    if (data.active && data.from !== auth.currentUser.email) {
-
-      document.getElementById("incomingCall").innerHTML =
-        `<button onclick="joinCall()">📞 Join Call</button>`;
-
-    }
-
-  });
-
-}
-
-function watchIncomingCalls() {
-
-  onSnapshot(collection(db, "calls"), async snapshot => {
-
-    for (const change of snapshot.docChanges()) {
-
-      if (change.type !== "added" && change.type !== "modified") continue;
-
-      const callData = change.doc.data();
-      const chatId = change.doc.id;
-
-      if (!callData.active) return;
-      if (callData.from === auth.currentUser.email) return;
-
-      // Check if user is part of this chat
-      const chatSnap = await getDoc(doc(db, "chats", chatId));
-
-      if (!chatSnap.exists()) return;
-
-      const chatData = chatSnap.data();
-
-      if (!chatData.members || !chatData.members.includes(auth.currentUser.email)) {
-        return;
-      }
-
-      // Show popup
-      const popup = document.getElementById("callPopup");
-      popup.style.display = "block";
-
-      document.getElementById("callerName").innerText =
-        userCache[callData.from] || callData.from.split("@")[0];
-
-      document.getElementById("answerCallBtn").onclick = async () => {
-
-        popup.style.display = "none";
-
-        currentChatId = chatId;
-        startCallPanel();
-
-      };
-
-      document.getElementById("declineCallBtn").onclick = async () => {
-
-        popup.style.display = "none";
-
-      };
-
-    }
-
-  });
-
-}
-
-let pc;
-let localStream;
-let callDoc;
-
-window.startCallPanel = async function() {
-
-
-  messagesDiv.innerHTML = `
-    <h3>📞 Voice Call</h3>
-    <p>Starting call...</p>
-    <audio id="remoteAudio" autoplay></audio>
-    <br><br>
-    <button onclick="endCall()">❌ End Call</button>
-  `;
-
-  document.getElementById("inputArea").style.display = "none";
-
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-  pc = new RTCPeerConnection();
-
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
-  });
-
-  pc.ontrack = e => {
-    document.getElementById("remoteAudio").srcObject = e.streams[0];
-  };
-
-  callDoc = doc(db, "calls", currentChatId);
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-
-  await setDoc(callDoc, {
-    offer: {
-      type: offer.type,
-      sdp: offer.sdp
-    }
-  });
-
-  onSnapshot(callDoc, async snapshot => {
-
-    const data = snapshot.data();
-
-    if (!pc.currentRemoteDescription && data?.answer) {
-
-      const answer = new RTCSessionDescription(data.answer);
-      await pc.setRemoteDescription(answer);
-
-    }
-
-  });
-
-};
-
-window.startCall = async function() {
-
-  const callDoc = doc(db, "calls", currentChatId);
-
-  await setDoc(callDoc, {
-    from: auth.currentUser.email,
-    active: true
-  });
-
-  startCallPanel();
-
-}
-
-window.answerCall = async function() {
-
-  currentChatId = "callPanel";
-
-  messagesDiv.innerHTML = `
-    <h3>📞 Voice Call</h3>
-    <p>Joining call...</p>
-    <audio id="remoteAudio" autoplay></audio>
-    <br><br>
-    <button onclick="endCall()">❌ End Call</button>
-  `;
-
-  document.getElementById("inputArea").style.display = "none";
-
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-  pc = new RTCPeerConnection();
-
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
-  });
-
-  pc.ontrack = e => {
-    document.getElementById("remoteAudio").srcObject = e.streams[0];
-  };
-
-  callDoc = doc(db, "calls", "global");
-
-  const callData = (await getDoc(callDoc)).data();
-
-  await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-
-  await updateDoc(callDoc, {
-    answer: {
-      type: answer.type,
-      sdp: answer.sdp
-    }
-  });
-
-};
-
-window.joinCall = async function() {
-
-  startCallPanel();
-
-}
-
-window.endCall = async function() {
-
-  if (pc) pc.close();
-
-  if (localStream) {
-    localStream.getTracks().forEach(track => track.stop());
-  }
-
-  await deleteDoc(doc(db, "calls", currentChatId));
-
-  document.getElementById("inputArea").style.display = "flex";
-
-  messagesDiv.innerHTML = "<h3>Call ended.</h3>";
-
-};
-	
 /* ---------------- INVITES / GROUPS / DMS ---------------- */
 /* YOUR ORIGINAL LOGIC BELOW UNCHANGED */
 
