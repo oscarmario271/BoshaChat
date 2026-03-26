@@ -5,7 +5,14 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-ai.js" type="module"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com",
+      "ai-logic": "https://www.gstatic.com/firebasejs/12.2.1/firebase-ai.js"
+    }
+  }
+</script>
   <style>
     body {
       margin: 0;
@@ -97,6 +104,7 @@
 </div>
 
 <script>
+import { getAI, getGenerativeModel, GoogleAIBackend } from "ai-logic";
 
 // your firebase config (copy EXACTLY from your main file)
 const firebaseConfig = {
