@@ -5,6 +5,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-ai.js"></script>
   <style>
     body {
       margin: 0;
@@ -109,6 +110,12 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
+// Initialize the Gemini Developer API backend service
+const ai = getAI(firebaseApp, { backend: new GoogleAIBackend() });
+
+// Create a `GenerativeModel` instance with a model that supports your use case
+const model = getGenerativeModel(ai, { model: "gemini-2.5-flash-lite" });
+
 const chat = document.getElementById("chat");
 
 firebase.auth().onAuthStateChanged((user) => {
@@ -140,18 +147,11 @@ function addMessage(text, type) {
 }
 
 async function getAIResponse(message) {
-  const response = await fetch("/.netlify/functions/chat", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: message
-    })
-  });
-
-  const data = await response.json();
-  return data.reply || data.error;
+  const prompt = message;
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+  const text = response.text();
+  return text;
 }
   
 async function send() {
