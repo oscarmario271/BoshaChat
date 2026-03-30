@@ -2,14 +2,12 @@
 <html>
 <head>
   <title>BoshaBot 🤖</title>
-  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
   <script type="importmap">
   {
     "imports": {
-      "firebase/app": "https://www.gstatic.com/",
-      "ai-logic": "https://www.gstatic.com/firebasejs/12.2.1/firebase-ai.js"
+      "firebase/app": "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js",
+      "firebase/ai": "https://www.gstatic.com/firebasejs/12.2.1/firebase-ai.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js"
     }
   }
 </script>
@@ -104,7 +102,9 @@
 </div>
 
 <script type="module">
-import { getAI, getGenerativeModel, GoogleAIBackend } from "ai-logic";
+import { initializeApp } from "firebase/app";
+import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
+import { onAuthStateChanged } from "firebase/auth";
 
 // your firebase config (copy EXACTLY from your main file)
 const firebaseConfig = {
@@ -116,7 +116,7 @@ const firebaseConfig = {
   appId: "1:732701616574:web:abeb808acd5d5bbb3a71ef"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
 
 // Initialize the Gemini Developer API backend service
 const ai = getAI(app, { backend: new GoogleAIBackend() });
@@ -126,7 +126,7 @@ const model = getGenerativeModel(ai, { model: "gemini-2.5-flash-lite" });
 
 const chat = document.getElementById("chat");
 
-firebase.auth().onAuthStateChanged((user) => {
+onAuthStateChanged((user) => {
   if (user) {
     console.log("Logged in as:", user.displayName || user.email);
     
