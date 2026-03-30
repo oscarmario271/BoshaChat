@@ -2,15 +2,6 @@
 <html>
 <head>
   <title>BoshaBot 🤖</title>
-  <script type="importmap">
-  {
-    "imports": {
-      "firebase/app": "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js",
-      "firebase/ai": "https://www.gstatic.com/firebasejs/12.2.1/firebase-ai.js",
-      "firebase/auth": "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js"
-    }
-  }
-</script>
   <style>
     body {
       margin: 0;
@@ -100,7 +91,15 @@
   <input id="msg" placeholder="Ask BoshaBot..." onkeydown="if(event.key==='Enter') send()">
   <button onclick="send()">Send</button>
 </div>
-
+<script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js",
+      "firebase/ai": "https://www.gstatic.com/firebasejs/12.2.1/firebase-ai.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js"
+    }
+  }
+</script>
 <script type="module">
 import { initializeApp } from "firebase/app";
 import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
