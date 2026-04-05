@@ -12,6 +12,9 @@
       height: 100vh;
       background: #f4f4f4;
     }
+	body.dark {
+		background: #171717;
+	}
 
     #sidebar {
 	  font-family: 'Fredoka One', sans-serif;
@@ -67,6 +70,9 @@
       margin: 5px 0;
       cursor: pointer;
     }
+	button.dark {
+		background: #171717;
+	}
 
     #loginBox {
       margin: auto;
@@ -437,6 +443,7 @@ window.openSettings = function() {
   messagesDiv.innerHTML = `
     <h3>⚙ Settings</h3>
     <button onclick="changeDisplayName()">Change Display Name</button>
+	<p>Dark mode: </p><input type="checkbox" onclick="toggleDarkMode()">
   `;
 }
 
@@ -450,6 +457,10 @@ window.changeDisplayName = async function() {
   );
 
   alert("Updated!");
+}
+window.toggleDarkMode = async function() {
+	document.body.classList.toggle('dark');
+	document.button.classList.toggle('dark');
 }
 
 /* ---------------- INVITES / GROUPS / DMS ---------------- */
