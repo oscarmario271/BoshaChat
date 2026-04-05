@@ -6,7 +6,7 @@
   <link rel="icon" type="image/png" href="res/BoshaChat.png">
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', 'Noto Sans', sans-serif;
       margin: 0;
       display: flex;
       height: 100vh;
@@ -16,6 +16,7 @@
     #sidebar {
 	  font-family: 'Fredoka One', sans-serif;
       width: 260px;
+	  min-width: 195px;
       background: #FF9500;
       color: #00A6FF;
       padding: 15px;
@@ -58,7 +59,7 @@
     }
 
     button {
-	  font-family: 'Segoe UI', sans-serif;
+	  font-family: 'Segoe UI', 'Noto Sans', sans-serif;
       background: white;
       border: 2px solid #00A6FF;
 	  border-radius: 10px;
@@ -74,6 +75,10 @@
 	#sendButton {
 	  border: 2px solid;
 	  border-radius: 10px;
+	}
+	bosha {
+		font-family: Comic Sans MS;
+		color: #FF9500;
 	}
   </style>
 </head>
@@ -108,8 +113,6 @@
 	
 	<button onclick="openSettings()">⚙ Settings</button><br>
     <button onclick="loadChat('onlinePanel')">🟢 Online Users</button>
-	<button onclick="startCall(otherUserId)">📞 Start Call</button>
-	<button onclick="endCall()">📞 End Call</button>
     <button onclick="logout()">Logout</button>
   </div>
 
@@ -135,7 +138,7 @@ import {
 import { 
   getFirestore, collection, addDoc, onSnapshot, 
   query, orderBy, doc, setDoc, getDocs, 
-  updateDoc, deleteDoc, getDoc 
+  updateDoc, deleteDoc, getDoc, Timestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -156,9 +159,6 @@ let unsubscribeMessages;
 let unsubscribeTyping;
 let currentDisplayName = "";
 let userCache = {};
-let peer = null
-let localStream = null
-let currentCallId = null
 
 const loginBox = document.getElementById("loginBox");
 const appDiv = document.getElementById("app");
@@ -450,137 +450,6 @@ window.changeDisplayName = async function() {
   );
 
   alert("Updated!");
-}
-	
-/* --------------------- CALL PANEL ----------------------- */
-
-onSnapshot(collection(db, "calls"), (snapshot) => {
-  snapshot.docChanges().forEach(change => {
-    const data = change.doc.data()
-
-    if (data.receiver === currentUser.uid && data.offer) {
-      const accept = confirm("Incoming call!")
-
-      if (accept) {
-        acceptCall(change.doc.id)
-      }
-    }
-  })
-})
-async function startCall(otherUserId) {
-  const myId = currentUser.uid
-  const callId = crypto.randomUUID()
-  currentCallId = callId
-
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
-  peer = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-  })
-
-  localStream.getTracks().forEach(track => {
-    peer.addTrack(track, localStream)
-  })
-
-  peer.ontrack = (event) => {
-    const audio = document.createElement("audio")
-    audio.srcObject = event.streams[0]
-    audio.autoplay = true
-  }
-
-  peer.onicecandidate = async (event) => {
-    if (event.candidate) {
-      await addDoc(collection(db, "calls", callId, "candidates"), {
-        candidate: event.candidate.toJSON()
-      })
-    }
-  }
-
-  const offer = await peer.createOffer()
-  await peer.setLocalDescription(offer)
-
-  await setDoc(doc(db, "calls", callId), {
-    caller: myId,
-    receiver: otherUserId,
-    offer: offer
-  })
-
-  listenForAnswer(callId)
-  listenForCandidates(callId)
-}
-async function acceptCall(callId) {
-  currentCallId = callId
-
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-
-  peer = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-  })
-
-  localStream.getTracks().forEach(track => {
-    peer.addTrack(track, localStream)
-  })
-
-  peer.ontrack = (event) => {
-    const audio = document.createElement("audio")
-    audio.srcObject = event.streams[0]
-    audio.autoplay = true
-  }
-
-  peer.onicecandidate = async (event) => {
-    if (event.candidate) {
-      await addDoc(collection(db, "calls", callId, "candidates"), {
-        candidate: event.candidate.toJSON()
-      })
-    }
-  }
-
-  const callDoc = doc(db, "calls", callId)
-
-  onSnapshot(callDoc, async (snap) => {
-    const data = snap.data()
-    if (data?.offer && !peer.currentRemoteDescription) {
-      await peer.setRemoteDescription(new RTCSessionDescription(data.offer))
-
-      const answer = await peer.createAnswer()
-      await peer.setLocalDescription(answer)
-
-      await updateDoc(callDoc, { answer })
-    }
-  })
-
-  listenForCandidates(callId)
-}
-function listenForAnswer(callId) {
-  onSnapshot(doc(db, "calls", callId), async (snap) => {
-    const data = snap.data()
-    if (data?.answer && !peer.currentRemoteDescription) {
-      await peer.setRemoteDescription(
-        new RTCSessionDescription(data.answer)
-      )
-    }
-  })
-}
-
-function listenForCandidates(callId) {
-  onSnapshot(collection(db, "calls", callId, "candidates"), (snapshot) => {
-    snapshot.docChanges().forEach(change => {
-      if (change.type === "added") {
-        const data = change.doc.data()
-        peer.addIceCandidate(new RTCIceCandidate(data.candidate))
-      }
-    })
-  })
-}
-function endCall() {
-  if (peer) {
-    peer.close()
-    peer = null
-  }
-
-  if (currentCallId) {
-    deleteDoc(doc(db, "calls", currentCallId))
-  }
 }
 
 /* ---------------- INVITES / GROUPS / DMS ---------------- */
