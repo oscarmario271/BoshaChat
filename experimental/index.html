@@ -144,7 +144,7 @@ import {
 import { 
   getFirestore, collection, addDoc, onSnapshot, 
   query, orderBy, doc, setDoc, getDocs, 
-  updateDoc, deleteDoc, getDoc, Timestamp 
+  updateDoc, deleteDoc, getDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -352,7 +352,7 @@ window.sendMessage = async function() {
   await addDoc(collection(db, "chats", currentChatId, "messages"), {
     user: auth.currentUser.email,
     text: messageInput.value,
-    timestamp: Date.now()
+    timestamp: serverTimestamp()
   });
 
   messageInput.value = "";
@@ -443,8 +443,9 @@ window.openSettings = function() {
   messagesDiv.innerHTML = `
     <h3>⚙ Settings</h3>
     <button onclick="changeDisplayName()">Change Display Name</button>
-	<p>Dark mode: </p><input type="checkbox" onclick="toggleDarkMode()">
   `;
+ //`<p>Dark mode: </p><input type="checkbox" onclick="toggleDarkMode()">
+//`;
 }
 
 window.changeDisplayName = async function() {
