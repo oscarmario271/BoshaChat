@@ -17,10 +17,5 @@
     "sizes": "512x512",
     "type": "image/png"
   },
-  {
-    "src": "/BoshaChat/res/BoshaChat.png",
-    "sizes": "715x610",
-    "type": "image/png"
-  }
 ]
 }
