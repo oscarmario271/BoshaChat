@@ -4,20 +4,14 @@
   <title>BoshaChat</title>
   <link href="https://fonts.googleapis.com/css?family=Fredoka+One" rel="stylesheet">
   <link rel="icon" type="image/png" href="res/BoshaChat.png">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="/BoshaChat/manifest.json">
-  <meta name="theme-color" content="#0f172a">
   <style>
     body {
       font-family: 'Segoe UI', 'Noto Sans', sans-serif;
       margin: 0;
       display: flex;
-      height: 100dvh;
-      background: #f4f4f4;
+      height: 100vh;
+      background: #171717;
     }
-	body.dark {
-		background: #171717;
-	}
 
     #sidebar {
 	  font-family: 'Fredoka One', sans-serif;
@@ -28,7 +22,7 @@
       padding: 15px;
 
       overflow-y: auto;
-      height: 100dvh;
+      height: 100vh;
       box-sizing: border-box;
     }
 
@@ -50,8 +44,7 @@
       flex: 1;
       padding: 15px;
       overflow-y: auto;
-      overflow-wrap: break-word;
-	  -webkit-overflow-scrolling: touch;
+	  color: white;
     }
 
     #inputArea {
@@ -64,20 +57,20 @@
       flex: 1;
       padding: 8px;
 	  border-radius: 10px;
+	  background: #171717;
+	  color: white;
     }
 
     button {
 	  font-family: 'Segoe UI', 'Noto Sans', sans-serif;
-      background: white;
+      background: #171717;
       border: 2px solid #00A6FF;
 	  border-radius: 10px;
       padding: 8px 12px;
       margin: 5px 0;
       cursor: pointer;
+	  color: white;
     }
-	button.dark {
-		background: #171717;
-	}
 
     #loginBox {
       margin: auto;
@@ -91,12 +84,16 @@
 		font-family: Comic Sans MS;
 		color: #FF9500;
 	}
+	martin {
+		color: green;
+		font-family: Orbitron;
+	}
   </style>
 </head>
 <body>
 
 <div id="loginBox">
-  <h2>Login</h2>
+  <h2 style="color:white;">Login</h2>
   <input id="email" placeholder="Email"><br><br>
   <input id="password" type="password" placeholder="Password"><br><br>
   <button onclick="login()">Login</button>
@@ -124,6 +121,7 @@
 	
 	<button onclick="openSettings()">⚙ Settings</button><br>
     <button onclick="loadChat('onlinePanel')">🟢 Online Users</button>
+	<button onclick="boshagames()">BoshaGames</button>
     <button onclick="logout()">Logout</button>
   </div>
 
@@ -467,6 +465,9 @@ window.changeDisplayName = async function() {
 window.toggleDarkMode = async function() {
 	document.body.classList.toggle('dark');
 	document.button.classList.toggle('dark');
+}
+window.boshagames = function() {
+	window.location.href = "/BoshaGames/hub/"
 }
 
 /* ---------------- INVITES / GROUPS / DMS ---------------- */
