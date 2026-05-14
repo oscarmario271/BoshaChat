@@ -88,6 +88,40 @@
 		color: green;
 		font-family: Orbitron;
 	}
+	.message {
+  position: relative;
+  display: inline-block;
+  max-width: 70%;
+  padding: 10px 14px;
+  margin: 6px 0;
+  border-radius: 18px;
+  background: #2a2d3a;
+  color: white;
+}
+
+.message-time {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 6px;
+
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+
+  white-space: nowrap;
+  pointer-events: none;
+
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.message:hover .message-time {
+  opacity: 1;
+}
   </style>
 </head>
 <body>
@@ -260,6 +294,32 @@ async function ensureGlobalExists() {
 
 /* ---------------- LOAD CHAT ---------------- */
 
+function formatTimestamp(timestamp) {
+  if (!timestamp) return "Sending...";
+
+  let date;
+
+  // Firestore Timestamp
+  if (timestamp.toDate) {
+    date = timestamp.toDate();
+  }
+  // Old Date.now() number
+  else if (typeof timestamp === "number") {
+    date = new Date(timestamp);
+  }
+  else {
+    return "";
+  }
+
+  return date.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+	
 window.loadChat = function(chatId) {
   currentChatId = chatId;
   messagesDiv.innerHTML = "";
@@ -289,8 +349,12 @@ window.loadChat = function(chatId) {
       userCache[data.user] ||
       data.user.split("@")[0];
 
-    messagesDiv.innerHTML +=
-      `<div><b>${name}</b>: ${data.text}</div>`;
+    messageDiv.className = "message";
+
+messageDiv.innerHTML = `
+  <div class="message-text"><b>${name}</b>: ${data.text}</div>
+  <div class="message-time">${formatTimestamp(data.timestamp)}</div>
+`;
   });
 
   snapshot.docChanges().forEach(change => {
