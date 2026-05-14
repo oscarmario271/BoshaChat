@@ -349,12 +349,15 @@ window.loadChat = function(chatId) {
       userCache[data.user] ||
       data.user.split("@")[0];
 
-    messageDiv.className = "message";
+    const messageDiv = document.createElement("div");
+messageDiv.className = "message";
 
 messageDiv.innerHTML = `
   <div class="message-text"><b>${name}</b>: ${data.text}</div>
   <div class="message-time">${formatTimestamp(data.timestamp)}</div>
 `;
+
+messagesDiv.appendChild(messageDiv);
   });
 
   snapshot.docChanges().forEach(change => {
