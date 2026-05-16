@@ -193,7 +193,7 @@ body.light #loginBox h2 {
 }
   </style>
 </head>
-<body>
+<body class="dark">
 
 <div id="loginBox">
   <h2>Login</h2>
@@ -580,7 +580,7 @@ window.openSettings = async function() {
     <h3>⚙ Settings</h3>
     <button onclick="changeDisplayName()">Change Display Name</button>
 	<span>Dark Mode (still in dev)</span>
-	<input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode() ${checked}></input>
+	<input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} />
   `;
 }
 
