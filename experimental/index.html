@@ -595,7 +595,7 @@ window.changeDisplayName = async function() {
 
   alert("Updated!");
 }
-window.loadDarkMode = function() {onSnapshot(doc(db, "users", user.email), snapshot => {
+window.loadDarkMode = function() {onSnapshot(doc(db, "users", auth.currentUser.email), snapshot => {
 		const data = snapshot.data();
 		if (data.darkMode == true) {
 			document.body.className = "dark";
