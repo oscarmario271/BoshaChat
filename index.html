@@ -5,12 +5,19 @@
   <link href="https://fonts.googleapis.com/css?family=Fredoka+One" rel="stylesheet">
   <link rel="icon" type="image/png" href="res/BoshaChat.png">
   <style>
-    body {
+    body.dark {
       font-family: 'Segoe UI', 'Noto Sans', sans-serif;
       margin: 0;
       display: flex;
       height: 100vh;
       background: #171717;
+    }
+    body.light {
+      font-family: 'Segoe UI', 'Noto Sans', sans-serif;
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      background: #EDEDED;
     }
 
     #sidebar {
@@ -44,8 +51,13 @@
       flex: 1;
       padding: 15px;
       overflow-y: auto;
-	  color: white;
     }
+	body.dark #messages {
+	  color: #EDEDED;
+	}
+	body.light #messages {
+	  color: #171717;
+	}
 
     #inputArea {
       display: flex;
@@ -57,20 +69,32 @@
       flex: 1;
       padding: 8px;
 	  border-radius: 10px;
-	  background: #171717;
-	  color: white;
     }
+	body.dark #inputArea input {
+	  background: #171717;
+	  color: #EDEDED;
+	}
+	body.light #inputArea input {
+	  background: #EDEDED;
+	  color: #171717;
+	}
 
     button {
 	  font-family: 'Segoe UI', 'Noto Sans', sans-serif;
-      background: #171717;
       border: 2px solid #00A6FF;
 	  border-radius: 10px;
       padding: 8px 12px;
       margin: 5px 0;
       cursor: pointer;
-	  color: white;
     }
+	body.dark button {
+	  background: #171717;
+      color: #EDEDED;
+    }
+	body.light button {
+	  background: #EDEDED;
+	  color: #171717;
+	}
 
     #loginBox {
       margin: auto;
@@ -99,8 +123,14 @@
   padding: 5px 7px;
   margin: 6px 0;
   border-radius: 18px;
+}
+body.dark .message {
   background: #00659C;
-  color: white;
+  color: #EDEDED;
+}
+body.light .message {
+  background: #D8ECFF;
+  color: #171717;
 }
 
 .message-time {
@@ -125,15 +155,48 @@
   transition: opacity 0.2s ease;
 }
 
-.message:hover .message-time {
+.message-sender {
+  margin-bottom: 6px;
+  color: #FF9500;
+  font-weight: bold;
+}
+
+.message-line {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 2px 0;
+}
+
+.message-text {
+  flex: 1;
+}
+
+.inline-time {
+  font-size: 11px;
+  color: #aaaaaa;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.message-line:hover .inline-time {
   opacity: 1;
+}
+
+body.dark #loginBox h2 {
+  color: #EDEDED;
+}
+
+body.light #loginBox h2 {
+  color: #171717;
 }
   </style>
 </head>
-<body>
+<body class="dark">
 
 <div id="loginBox">
-  <h2 style="color:white;">Login</h2>
+  <h2>Login</h2>
   <input id="email" placeholder="Email"><br><br>
   <input id="password" type="password" placeholder="Password"><br><br>
   <button onclick="login()">Login</button>
@@ -160,8 +223,7 @@
     <hr>
 	
 	<button onclick="openSettings()">⚙ Settings</button><br>
-    <button onclick="loadChat('onlinePanel')">🟢 Online Users</button>
-	<button onclick="boshagames()">BoshaGames</button>
+	<button onclick="boshagames()">🎮 BoshaGames</button>
     <button onclick="logout()">Logout</button>
   </div>
 
@@ -232,11 +294,9 @@ async function ensureUserProfile(user) {
 
     await setDoc(ref, {
       displayName: currentDisplayName,
-      online: true
     });
   } else {
     currentDisplayName = snap.data().displayName;
-    await updateDoc(ref, { online: true });
   }
 }
 
@@ -264,9 +324,6 @@ window.login = function() {
 }
 
 window.logout = async function() {
-  await updateDoc(doc(db, "users", auth.currentUser.email), {
-    online: false
-  });
   signOut(auth);
 }
 
@@ -282,10 +339,11 @@ onAuthStateChanged(auth, async user => {
     loadChat("global");
     loadChats();
     loadInvites();
-    watchOnlineUsers();
+	loadDarkMode();
   } else {
     loginBox.style.display = "block";
     appDiv.style.display = "none";
+	document.body.className = "dark";
   }
 });
 
@@ -335,11 +393,6 @@ window.loadChat = function(chatId) {
   if (unsubscribeMessages) unsubscribeMessages();
   if (unsubscribeTyping) unsubscribeTyping();
 
-  if (chatId === "onlinePanel") {
-    loadOnlinePanel();
-    return;
-  }
-
   const q = query(
     collection(db, "chats", chatId, "messages"),
     orderBy("timestamp")
@@ -350,23 +403,46 @@ window.loadChat = function(chatId) {
   unsubscribeMessages = onSnapshot(q, snapshot => {
   messagesDiv.innerHTML = "";
 
-  snapshot.forEach(docSnap => {
-    const data = docSnap.data();
+let lastSender = null;
+let currentBubble = null;
+let currentMessagesContainer = null;
 
-    const name =
-      userCache[data.user] ||
-      data.user.split("@")[0];
+snapshot.forEach(docSnap => {
+  const data = docSnap.data();
 
-    const messageDiv = document.createElement("div");
-messageDiv.className = "message";
+  const name =
+    userCache[data.user] ||
+    data.user.split("@")[0];
 
-messageDiv.innerHTML = `
-  <div class="message-text"><b>${name}</b>: ${data.text}</div>
-  <div class="message-time">${formatTimestamp(data.timestamp)}</div>
-`;
+  // Create a new bubble if sender changed
+  if (data.user !== lastSender) {
+    currentBubble = document.createElement("div");
+    currentBubble.className = "message";
 
-messagesDiv.appendChild(messageDiv);
-  });
+    currentBubble.innerHTML = `
+      <div class="message-sender"><h3>${name}</h3></div>
+      <div class="message-lines"></div>
+    `;
+
+    currentMessagesContainer =
+      currentBubble.querySelector(".message-lines");
+
+    messagesDiv.appendChild(currentBubble);
+
+    lastSender = data.user;
+  }
+
+  // Add one message line to the current bubble
+  const line = document.createElement("div");
+  line.className = "message-line";
+
+  line.innerHTML = `
+    <span class="message-text">${data.text}</span>
+    <span class="inline-time">${formatTimestamp(data.timestamp)}</span>
+  `;
+
+  currentMessagesContainer.appendChild(line);
+});
 
   snapshot.docChanges().forEach(change => {
 
@@ -493,37 +569,19 @@ function watchTyping(chatId) {
   );
 }
 
-/* ---------------- ONLINE USERS ---------------- */
-
-function watchOnlineUsers() {
-  onSnapshot(collection(db, "users"), snapshot => {});
-}
-
-function loadOnlinePanel() {
-  messagesDiv.innerHTML = "<h3>🟢 Online Users</h3>";
-
-  onSnapshot(collection(db, "users"), snapshot => {
-    messagesDiv.innerHTML = "<h3>🟢 Online Users</h3>";
-
-    snapshot.forEach(docSnap => {
-      if (docSnap.data().online) {
-        messagesDiv.innerHTML += 
-          `<div>${docSnap.data().displayName}</div>`;
-      }
-    });
-  });
-}
-
 /* ---------------- SETTINGS PANEL ---------------- */
 
-window.openSettings = function() {
+window.openSettings = async function() {
+  const snap = await getDoc(doc(db, "users", auth.currentUser.email));
+  const darkMode = snap.data().darkMode;
+  const checked = darkMode ? "checked" : "";
   currentChatId = "settingsPanel";
   messagesDiv.innerHTML = `
     <h3>⚙ Settings</h3>
     <button onclick="changeDisplayName()">Change Display Name</button>
+	<span>Dark Mode</span>
+	<input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} />
   `;
- //`<p>Dark mode: </p><input type="checkbox" onclick="toggleDarkMode()">
-//`;
 }
 
 window.changeDisplayName = async function() {
@@ -537,9 +595,21 @@ window.changeDisplayName = async function() {
 
   alert("Updated!");
 }
-window.toggleDarkMode = async function() {
-	document.body.classList.toggle('dark');
-	document.button.classList.toggle('dark');
+window.loadDarkMode = function() {onSnapshot(doc(db, "users", auth.currentUser.email), snapshot => {
+		const data = snapshot.data();
+		if (data.darkMode == true) {
+			document.body.className = "dark";
+		} else {
+			document.body.className = "light";
+		}
+});
+};
+window.checkboxDarkMode = async function() {
+	const checkbox = document.getElementById("darkModeCheck");
+await updateDoc(
+  doc(db, "users", auth.currentUser.email), {
+    darkMode: checkbox.checked
+  });
 }
 window.boshagames = function() {
 	window.location.href = "/BoshaGames/hub/"
@@ -592,15 +662,6 @@ window.createGroup = async function() {
     });
   }
 };
-window.addEventListener("beforeunload", async () => {
-  if (auth.currentUser) {
-    try {
-      await updateDoc(doc(db, "users", auth.currentUser.email), {
-        online: false
-      });
-    } catch {}
-  }
-});
 function loadInvites() {
   onSnapshot(collection(db, "invites"), snapshot => {
     inviteSection.innerHTML = "<hr><h3>📨 Invites</h3>";
