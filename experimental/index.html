@@ -125,7 +125,32 @@
   transition: opacity 0.2s ease;
 }
 
-.message:hover .message-time {
+.message-sender {
+  margin-bottom: 6px;
+  color: #9ecbff;
+  font-weight: bold;
+}
+
+.message-line {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 2px 0;
+}
+
+.message-text {
+  flex: 1;
+}
+
+.inline-time {
+  font-size: 11px;
+  color: #aaaaaa;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.message-line:hover .inline-time {
   opacity: 1;
 }
   </style>
@@ -160,8 +185,7 @@
     <hr>
 	
 	<button onclick="openSettings()">⚙ Settings</button><br>
-    <button onclick="loadChat('onlinePanel')">🟢 Online Users</button>
-	<button onclick="boshagames()">BoshaGames</button>
+	<button onclick="boshagames()">🎮 BoshaGames</button>
     <button onclick="logout()">Logout</button>
   </div>
 
@@ -335,11 +359,6 @@ window.loadChat = function(chatId) {
   if (unsubscribeMessages) unsubscribeMessages();
   if (unsubscribeTyping) unsubscribeTyping();
 
-  if (chatId === "onlinePanel") {
-    loadOnlinePanel();
-    return;
-  }
-
   const q = query(
     collection(db, "chats", chatId, "messages"),
     orderBy("timestamp")
@@ -350,23 +369,46 @@ window.loadChat = function(chatId) {
   unsubscribeMessages = onSnapshot(q, snapshot => {
   messagesDiv.innerHTML = "";
 
-  snapshot.forEach(docSnap => {
-    const data = docSnap.data();
+let lastSender = null;
+let currentBubble = null;
+let currentMessagesContainer = null;
 
-    const name =
-      userCache[data.user] ||
-      data.user.split("@")[0];
+snapshot.forEach(docSnap => {
+  const data = docSnap.data();
 
-    const messageDiv = document.createElement("div");
-messageDiv.className = "message";
+  const name =
+    userCache[data.user] ||
+    data.user.split("@")[0];
 
-messageDiv.innerHTML = `
-  <div class="message-text"><b>${name}</b>: ${data.text}</div>
-  <div class="message-time">${formatTimestamp(data.timestamp)}</div>
-`;
+  // Create a new bubble if sender changed
+  if (data.user !== lastSender) {
+    currentBubble = document.createElement("div");
+    currentBubble.className = "message";
 
-messagesDiv.appendChild(messageDiv);
-  });
+    currentBubble.innerHTML = `
+      <div class="message-sender"><h3>${name}</h3></div>
+      <div class="message-lines"></div>
+    `;
+
+    currentMessagesContainer =
+      currentBubble.querySelector(".message-lines");
+
+    messagesDiv.appendChild(currentBubble);
+
+    lastSender = data.user;
+  }
+
+  // Add one message line to the current bubble
+  const line = document.createElement("div");
+  line.className = "message-line";
+
+  line.innerHTML = `
+    <span class="message-text">${data.text}</span>
+    <span class="inline-time">${formatTimestamp(data.timestamp)}</span>
+  `;
+
+  currentMessagesContainer.appendChild(line);
+});
 
   snapshot.docChanges().forEach(change => {
 
@@ -491,27 +533,6 @@ function watchTyping(chatId) {
       }
     }
   );
-}
-
-/* ---------------- ONLINE USERS ---------------- */
-
-function watchOnlineUsers() {
-  onSnapshot(collection(db, "users"), snapshot => {});
-}
-
-function loadOnlinePanel() {
-  messagesDiv.innerHTML = "<h3>🟢 Online Users</h3>";
-
-  onSnapshot(collection(db, "users"), snapshot => {
-    messagesDiv.innerHTML = "<h3>🟢 Online Users</h3>";
-
-    snapshot.forEach(docSnap => {
-      if (docSnap.data().online) {
-        messagesDiv.innerHTML += 
-          `<div>${docSnap.data().displayName}</div>`;
-      }
-    });
-  });
 }
 
 /* ---------------- SETTINGS PANEL ---------------- */
