@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>BoshaBot 🤖</title>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -78,6 +79,26 @@
     button:hover {
       background: #1d4ed8;
     }
+    
+.msg.bot p {
+  margin: 6px 0;
+}
+
+.msg.bot code {
+  background: #111;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.msg.bot ul,
+.msg.bot ol {
+  margin: 5px 0 5px 20px;
+}
+
+.msg.bot b,
+.msg.bot strong {
+  color: #60a5fa;
+}
   </style>
 </head>
 
@@ -122,9 +143,24 @@ const auth = getAuth(app);
 const ai = getAI(app, { backend: new GoogleAIBackend() });
 
 // Create a `GenerativeModel` instance with a model that supports your use case
-const model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
+const model = getGenerativeModel(ai, {
+  model: "gemini-2.5-flash"
+});
+
+const chatSession = model.startChat({
+  history: [
+    {
+      role: "user",
+      parts: [{
+        text: "You are BoshaBot. Format responses using HTML tags instead of markdown. Allowed tags: b, i, u, code, br, ul, ol, li, p. Do not use markdown."
+      }]
+    }
+  ]
+});
 
 const chat = document.getElementById("chat");
+
+const conversationHistory = [];
 
 onAuthStateChanged(auth, async user => {
   if (user) {
@@ -143,23 +179,22 @@ function addMessage(text, type) {
   const div = document.createElement("div");
   div.className = "msg " + type;
 
-  if (type === "user") {
-    const name = window.currentUser?.displayName || "You";
-    div.textContent = name + ": " + text;
-  } else {
-    div.textContent = "BoshaBot: " + text;
-  }
+if (type === "user") {
+  const name = window.currentUser?.displayName || "You";
+  div.textContent = name + ": " + text;
+} else {
+  div.innerHTML =
+  "<strong>BoshaBot:</strong><br>" +
+  DOMPurify.sanitize(text);
+}
 
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
 }
 
 async function getAIResponse(message) {
-  const prompt = message;
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  const text = response.text();
-  return text;
+  const result = await chatSession.sendMessage(message);
+  return result.response.text();
 }
   
 window.sendToAI = async function() {
