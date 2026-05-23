@@ -389,6 +389,7 @@ return date.toLocaleString("en-GB", {
 window.loadChat = function(chatId) {
   currentChatId = chatId;
   messagesDiv.innerHTML = "";
+  window.location.href = "/BoshaChat/?chatID=" + currentChatId;
 
   if (unsubscribeMessages) unsubscribeMessages();
   if (unsubscribeTyping) unsubscribeTyping();
