@@ -223,7 +223,8 @@ body.light #loginBox h2 {
     <hr>
 	
 	<button onclick="openSettings()">⚙ Settings</button><br>
-	<button onclick="boshagames()">🎮 BoshaGames</button>
+	<button onclick="BoshaGames()">🎮 BoshaGames</button>
+	<button onclick="BoshaBot()">🤖 BoshaBot</button><br>
     <button onclick="logout()">Logout</button>
   </div>
 
@@ -611,9 +612,12 @@ await updateDoc(
     darkMode: checkbox.checked
   });
 }
-window.boshagames = function() {
+window.BoshaGames = function() {
 	window.location.href = "/BoshaGames/hub/"
-}
+};
+window.BoshaBot = function() {
+	window.location.href = "/BoshaChat/AI/"
+};
 
 /* ---------------- INVITES / GROUPS / DMS ---------------- */
 /* YOUR ORIGINAL LOGIC BELOW UNCHANGED */
