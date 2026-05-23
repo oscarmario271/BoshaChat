@@ -117,7 +117,8 @@
     "imports": {
       "firebase/app": "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js",
       "firebase/ai": "https://www.gstatic.com/firebasejs/12.2.1/firebase-ai.js",
-      "firebase/auth": "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js"
+      "firebase/auth": "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js"
     }
   }
 </script>
@@ -125,6 +126,7 @@
 import { initializeApp } from "firebase/app";
 import { getAI, getGenerativeModel, GoogleAIBackend } from "firebase/ai";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, getDoc, doc } from "firebase/firestore";
 
 // your firebase config (copy EXACTLY from your main file)
 const firebaseConfig = {
@@ -138,14 +140,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-
-// Initialize the Gemini Developer API backend service
 const ai = getAI(app, { backend: new GoogleAIBackend() });
+const db = getFirestore(app);
 
-// Create a `GenerativeModel` instance with a model that supports your use case
 const model = getGenerativeModel(ai, {
   model: "gemini-2.5-flash"
 });
+
+window.getDisplayName = async function(email) {
+  const snap = await getDoc(doc(db, "users", email));
+  return snap.exists() ? snap.data().displayName : email;
+}
 
 const chatSession = model.startChat({
   history: [
