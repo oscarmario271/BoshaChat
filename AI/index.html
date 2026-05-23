@@ -185,8 +185,7 @@ function addMessage(text, type) {
   div.className = "msg " + type;
 
 if (type === "user") {
-  const name = "You";
-  div.textContent = name + ": " + text;
+  div.textContent = "You: " + text;
 } else {
   div.innerHTML =
   "<strong>BoshaBot:</strong><br>" +
