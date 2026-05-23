@@ -116,13 +116,13 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app)
+const auth = getAuth(app);
 
 // Initialize the Gemini Developer API backend service
 const ai = getAI(app, { backend: new GoogleAIBackend() });
 
 // Create a `GenerativeModel` instance with a model that supports your use case
-const model = getGenerativeModel(ai, { model: "gemini-3.5-flash" });
+const model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
 
 const chat = document.getElementById("chat");
 
@@ -180,10 +180,15 @@ async function send() {
   try {
     const reply = await getAIResponse(text);
     typing.remove();
-    addMessage(reply.replace(text, "").trim(), "bot");
+    addMessage(reply, "bot");
   } catch (err) {
     typing.remove();
-    addMessage("Error getting response 😬", "bot");
+    catch (err) {
+      console.error(err);
+      typing.remove();
+      addMessage("Error: " + err.message, "bot");
+      console.error(err);
+    }
   }
 }
 </script>
