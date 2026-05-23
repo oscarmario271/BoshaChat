@@ -162,7 +162,7 @@ async function getAIResponse(message) {
   return text;
 }
   
-async function send() {
+window.sendToAI = async function() {
   const input = document.getElementById("msg");
   const text = input.value.trim();
 
@@ -188,7 +188,7 @@ async function send() {
     addMessage("Error: " + err.message, "bot");
     console.error(err);
   }
-}
+};
 </script>
 
 </body>
