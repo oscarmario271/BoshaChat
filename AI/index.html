@@ -183,12 +183,10 @@ async function send() {
     addMessage(reply, "bot");
   } catch (err) {
     typing.remove();
-    catch (err) {
-      console.error(err);
-      typing.remove();
-      addMessage("Error: " + err.message, "bot");
-      console.error(err);
-    }
+    console.error(err);
+    typing.remove();
+    addMessage("Error: " + err.message, "bot");
+    console.error(err);
   }
 }
 </script>
