@@ -393,7 +393,7 @@ return date.toLocaleString("en-GB", {
 });
 }
 	
-window.loadChat = function(chatId) {
+window.loadChat = async function(chatId) {
   currentChatId = chatId;
   messagesDiv.innerHTML = "";
 
