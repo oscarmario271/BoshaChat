@@ -415,15 +415,15 @@ let lastSender = null;
 let currentBubble = null;
 let currentMessagesContainer = null;
 
+const profileDoc = await getDoc(doc(db, "users", data.user));
+const profile = profileDoc.data().profile || "";
+
 for (const docSnap of snapshot.docs) {
   const data = docSnap.data();
 
   const name =
     userCache[data.user] ||
     data.user.split("@")[0];
-
-  const profileDoc = await getDoc(doc(db, "users", data.user));
-  const profile = profileDoc.data().profile || "";
 
   // Create a new bubble if sender changed
   if (data.user !== lastSender) {
