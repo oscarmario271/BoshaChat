@@ -393,7 +393,7 @@ return date.toLocaleString("en-GB", {
 });
 }
 	
-window.loadChat = async function(chatId) {
+window.loadChat = function(chatId) {
   currentChatId = chatId;
   messagesDiv.innerHTML = "";
 
@@ -421,7 +421,7 @@ snapshot.forEach(docSnap => {
     userCache[data.user] ||
     data.user.split("@")[0];
 
-  const profileDoc = await getDoc(doc(db, "users", auth.currentUser.email));
+  const profileDoc = getDoc(doc(db, "users", auth.currentUser.email));
   const profile = profileDoc.data().profile;
 
   // Create a new bubble if sender changed
