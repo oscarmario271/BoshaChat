@@ -191,6 +191,11 @@ body.dark #loginBox h2 {
 body.light #loginBox h2 {
   color: #171717;
 }
+.profile-image {
+  height: 1em;
+  width: auto;
+  vertical-align: middle;
+}
   </style>
 </head>
 <body class="dark">
@@ -252,6 +257,7 @@ import {
   query, orderBy, doc, setDoc, getDocs, 
   updateDoc, deleteDoc, getDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { Base64 } from "https://cdn.jsdelivr.net/npm/js-base64@3.7.8/base64.mjs";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBqLckLS5qxKZ06S0fsbQS_mWPVFi4E00w",
@@ -301,7 +307,7 @@ async function ensureUserProfile(user) {
   }
 }
 
-async function getDisplayName(email) {
+window.getDisplayName = async function(email) {
   const snap = await getDoc(doc(db, "users", email));
   return snap.exists() ? snap.data().displayName : email;
 }
@@ -415,13 +421,16 @@ snapshot.forEach(docSnap => {
     userCache[data.user] ||
     data.user.split("@")[0];
 
+  const profileDoc = await getDoc(doc(db, "users", auth.currentUser.email));
+  const profile = profileDoc.data().profile;
+
   // Create a new bubble if sender changed
   if (data.user !== lastSender) {
     currentBubble = document.createElement("div");
     currentBubble.className = "message";
 
     currentBubble.innerHTML = `
-      <div class="message-sender"><h3>${name}</h3></div>
+      <div class="message-sender"><h3><img src="data:image/png;base64,${profile}" class="profile-image"> ${name}</h3></div>
       <div class="message-lines"></div>
     `;
 
@@ -582,6 +591,7 @@ window.openSettings = async function() {
     <button onclick="changeDisplayName()">Change Display Name</button>
 	<span>Dark Mode</span>
 	<input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} />
+	<input type="file" id="profileChanger" accept="image/png" />
   `;
 }
 
@@ -612,12 +622,26 @@ await updateDoc(
     darkMode: checkbox.checked
   });
 }
+const profileChanger = document.getElementById("profileChanger");
+profileChanger.addEventListener("change", () => {
+	const file = profileChanger.files[0];
+    const reader = new FileReader();
+
+	reader.onload = async () => {
+		const data = reader.result.split(",")[1];
+		await updateDoc(doc(db, "users", auth.currentUser.email), {
+			profile: data
+		});
+	};
+
+	reader.readAsDataURL(file);
+});
 window.BoshaGames = function() {
 	window.location.href = "/BoshaGames/hub/"
-};
+}
 window.BoshaBot = function() {
 	window.location.href = "/BoshaChat/AI/"
-};
+}
 
 /* ---------------- INVITES / GROUPS / DMS ---------------- */
 /* YOUR ORIGINAL LOGIC BELOW UNCHANGED */
