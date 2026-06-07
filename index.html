@@ -592,11 +592,10 @@ window.openSettings = async function() {
   const checked = darkMode ? "checked" : "";
   currentChatId = "settingsPanel";
   messagesDiv.innerHTML = `
-    <h3>⚙ Settings</h3>
-    <button onclick="changeDisplayName()">Change Display Name</button>
-	<span>Dark Mode</span>
-	<input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} />
-	<input type="file" id="profileChanger" accept="image/png" />
+    <h2>⚙ Settings</h2>
+    <button onclick="changeDisplayName()">Change Display Name</button><br>
+	<h3>Dark Mode</h3><input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} /><br>
+	<h3>Profile Pic 🖼️*</h3><input type="file" id="profileChanger" accept="image/png" /><br><p>*Ask Oscar for help if needed.</p>
   `;
 
   setTimeout(() => {
