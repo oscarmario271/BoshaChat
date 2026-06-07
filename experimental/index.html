@@ -195,6 +195,7 @@ body.light #loginBox h2 {
   height: 1em;
   width: auto;
   vertical-align: middle;
+  background: transparent;
 }
   </style>
 </head>
@@ -421,7 +422,7 @@ for (const docSnap of snapshot.docs) {
     userCache[data.user] ||
     data.user.split("@")[0];
 
-  const profileDoc = await getDoc(doc(db, "users", auth.currentUser.email));
+  const profileDoc = await getDoc(doc(db, "users", data.user));
   const profile = profileDoc.data().profile || "";
 
   // Create a new bubble if sender changed
