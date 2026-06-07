@@ -191,6 +191,12 @@ body.dark #loginBox h2 {
 body.light #loginBox h2 {
   color: #171717;
 }
+.profile-image {
+  height: 1em;
+  width: auto;
+  vertical-align: middle;
+  background: transparent;
+}
   </style>
 </head>
 <body class="dark">
@@ -252,6 +258,7 @@ import {
   query, orderBy, doc, setDoc, getDocs, 
   updateDoc, deleteDoc, getDoc, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { Base64 } from "https://cdn.jsdelivr.net/npm/js-base64@3.7.8/base64.mjs";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBqLckLS5qxKZ06S0fsbQS_mWPVFi4E00w",
@@ -309,7 +316,10 @@ window.getDisplayName = async function(email) {
 function watchUsers() {
   onSnapshot(collection(db, "users"), snapshot => {
     snapshot.forEach(docSnap => {
-      userCache[docSnap.id] = docSnap.data().displayName;
+      userCache[docSnap.id] = {
+		  displayName: docSnap.data().displayName,
+		  profile: docSnap.data().profile || ""
+	  };
     });
   });
 }
@@ -387,7 +397,7 @@ return date.toLocaleString("en-GB", {
 });
 }
 	
-window.loadChat = function(chatId) {
+window.loadChat = async function(chatId) {
   currentChatId = chatId;
   messagesDiv.innerHTML = "";
 
@@ -401,27 +411,31 @@ window.loadChat = function(chatId) {
 
   const messageSound = new Audio("res/ping.mp3");
 
-  unsubscribeMessages = onSnapshot(q, snapshot => {
+  unsubscribeMessages = onSnapshot(q, async snapshot => {
   messagesDiv.innerHTML = "";
 
 let lastSender = null;
 let currentBubble = null;
 let currentMessagesContainer = null;
 
-snapshot.forEach(docSnap => {
+for (const docSnap of snapshot.docs) {
   const data = docSnap.data();
 
-  const name =
-    userCache[data.user] ||
-    data.user.split("@")[0];
+  const userData = userCache[data.user] || {};
+  const name = userData.displayName || data.user.split("@")[0];
+  const profile = userData.profile || "";
 
   // Create a new bubble if sender changed
   if (data.user !== lastSender) {
     currentBubble = document.createElement("div");
     currentBubble.className = "message";
 
+	const profileImg = profile
+      ? `data:image/png;base64,${profile}`
+      : "res/profile.png";
+	  
     currentBubble.innerHTML = `
-      <div class="message-sender"><h3>${name}</h3></div>
+      <div class="message-sender"><h3><img src="${profileImg}" class="profile-image"> ${name}</h3></div>
       <div class="message-lines"></div>
     `;
 
@@ -443,7 +457,7 @@ snapshot.forEach(docSnap => {
   `;
 
   currentMessagesContainer.appendChild(line);
-});
+};
 
   snapshot.docChanges().forEach(change => {
 
@@ -480,7 +494,7 @@ async function loadChats() {
   );
 
   const display =
-    userCache[otherUser] ||
+    userCache[otherUser].displayName ||
     otherUser?.split("@")[0] ||
     "DM";
 
@@ -551,7 +565,7 @@ function watchTyping(chatId) {
       snapshot.forEach(docSnap => {
         if (docSnap.id !== auth.currentUser.email) {
           const name =
-            userCache[docSnap.id] ||
+            userCache[docSnap.id].displayName ||
             docSnap.id.split("@")[0];
 
           typingUsers.push(name);
@@ -582,7 +596,27 @@ window.openSettings = async function() {
     <button onclick="changeDisplayName()">Change Display Name</button>
 	<span>Dark Mode</span>
 	<input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} />
+	<input type="file" id="profileChanger" accept="image/png" />
   `;
+
+  setTimeout(() => {
+    const profileChanger = document.getElementById("profileChanger");
+
+    profileChanger.addEventListener("change", () => {
+      const file = profileChanger.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async () => {
+        const data = reader.result.split(",")[1];
+
+        await updateDoc(doc(db, "users", auth.currentUser.email), {
+          profile: data
+        });
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }, 0);
 }
 
 window.changeDisplayName = async function() {
