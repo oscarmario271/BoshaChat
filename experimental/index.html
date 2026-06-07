@@ -494,7 +494,7 @@ async function loadChats() {
   );
 
   const display =
-    userCache[otherUser] ||
+    userCache[otherUser].displayName ||
     otherUser?.split("@")[0] ||
     "DM";
 
@@ -565,7 +565,7 @@ function watchTyping(chatId) {
       snapshot.forEach(docSnap => {
         if (docSnap.id !== auth.currentUser.email) {
           const name =
-            userCache[docSnap.id] ||
+            userCache[docSnap.id].displayName ||
             docSnap.id.split("@")[0];
 
           typingUsers.push(name);
