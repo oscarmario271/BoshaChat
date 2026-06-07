@@ -414,23 +414,27 @@ let lastSender = null;
 let currentBubble = null;
 let currentMessagesContainer = null;
 
-snapshot.forEach(docSnap => {
+for (const docSnap of snapshot.docs) {
   const data = docSnap.data();
 
   const name =
     userCache[data.user] ||
     data.user.split("@")[0];
 
-  const profileDoc = getDoc(doc(db, "users", auth.currentUser.email));
-  const profile = profileDoc.data().profile;
+  const profileDoc = await getDoc(doc(db, "users", auth.currentUser.email));
+  const profile = profileDoc.data().profile || "";
 
   // Create a new bubble if sender changed
   if (data.user !== lastSender) {
     currentBubble = document.createElement("div");
     currentBubble.className = "message";
 
+	const profileImg = profile
+      ? `data:image/png;base64,${profile}`
+      : "res/default.png";
+	  
     currentBubble.innerHTML = `
-      <div class="message-sender"><h3><img src="data:image/png;base64,${profile}" class="profile-image"> ${name}</h3></div>
+      <div class="message-sender"><h3><img src="${profileImg}" class="profile-image"> ${name}</h3></div>
       <div class="message-lines"></div>
     `;
 
@@ -593,6 +597,25 @@ window.openSettings = async function() {
 	<input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} />
 	<input type="file" id="profileChanger" accept="image/png" />
   `;
+
+  setTimeout(() => {
+    const profileChanger = document.getElementById("profileChanger");
+
+    profileChanger.addEventListener("change", () => {
+      const file = profileChanger.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async () => {
+        const data = reader.result.split(",")[1];
+
+        await updateDoc(doc(db, "users", auth.currentUser.email), {
+          profile: data
+        });
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }, 0);
 }
 
 window.changeDisplayName = async function() {
@@ -622,20 +645,6 @@ await updateDoc(
     darkMode: checkbox.checked
   });
 }
-const profileChanger = document.getElementById("profileChanger");
-profileChanger.addEventListener("change", () => {
-	const file = profileChanger.files[0];
-    const reader = new FileReader();
-
-	reader.onload = async () => {
-		const data = reader.result.split(",")[1];
-		await updateDoc(doc(db, "users", auth.currentUser.email), {
-			profile: data
-		});
-	};
-
-	reader.readAsDataURL(file);
-});
 window.BoshaGames = function() {
 	window.location.href = "/BoshaGames/hub/"
 }
