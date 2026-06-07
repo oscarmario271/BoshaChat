@@ -316,7 +316,10 @@ window.getDisplayName = async function(email) {
 function watchUsers() {
   onSnapshot(collection(db, "users"), snapshot => {
     snapshot.forEach(docSnap => {
-      userCache[docSnap.id] = docSnap.data().displayName;
+      userCache[docSnap.id] = {
+		  displayName: docSnap.data().displayName,
+		  profile: docSnap.data().profile || ""
+	  };
     });
   });
 }
@@ -418,12 +421,9 @@ let currentMessagesContainer = null;
 for (const docSnap of snapshot.docs) {
   const data = docSnap.data();
 
-  const name =
-    userCache[data.user] ||
-    data.user.split("@")[0];
-
-  const profileDoc = await getDoc(doc(db, "users", data.user));
-  const profile = profileDoc.data().profile || "";
+  const userData = userCache[data.user] || {};
+  const name = userData.displayName || data.user.split("@")[0];
+  const profile = userData.profile || "";
 
   // Create a new bubble if sender changed
   if (data.user !== lastSender) {
