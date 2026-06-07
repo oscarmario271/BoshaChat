@@ -407,12 +407,15 @@ window.loadChat = async function(chatId) {
 
   const messageSound = new Audio("res/ping.mp3");
 
-  unsubscribeMessages = onSnapshot(q, snapshot => {
+  unsubscribeMessages = onSnapshot(q, async snapshot => {
   messagesDiv.innerHTML = "";
 
 let lastSender = null;
 let currentBubble = null;
 let currentMessagesContainer = null;
+
+const profileDoc = await getDoc(doc(db, "users", auth.currentUser.email));
+const profile = profileDoc.data().profile || "";
 
 for (const docSnap of snapshot.docs) {
   const data = docSnap.data();
@@ -420,9 +423,6 @@ for (const docSnap of snapshot.docs) {
   const name =
     userCache[data.user] ||
     data.user.split("@")[0];
-
-  const profileDoc = await getDoc(doc(db, "users", auth.currentUser.email));
-  const profile = profileDoc.data().profile || "";
 
   // Create a new bubble if sender changed
   if (data.user !== lastSender) {
