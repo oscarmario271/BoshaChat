@@ -74,7 +74,7 @@
 	  background: #171717;
 	  color: #EDEDED;
 	}
-	body.light #inputArea input {
+	body.light # input {
 	  background: #EDEDED;
 	  color: #171717;
 	}
@@ -398,6 +398,8 @@ return date.toLocaleString("en-GB", {
 }
 	
 window.loadChat = async function(chatId) {
+  const inputArea = document.getElementById("inputArea");
+  inputArea.style.display = "flex";
   currentChatId = chatId;
   messagesDiv.innerHTML = "";
 
@@ -587,14 +589,17 @@ function watchTyping(chatId) {
 /* ---------------- SETTINGS PANEL ---------------- */
 
 window.openSettings = async function() {
+  const inputArea = document.getElementById("inputArea");
+  inputArea.style.display = "none";
   const snap = await getDoc(doc(db, "users", auth.currentUser.email));
   const darkMode = snap.data().darkMode;
   const checked = darkMode ? "checked" : "";
   currentChatId = "settingsPanel";
   messagesDiv.innerHTML = `
+    <hr>
     <h2>⚙ Settings</h2>
-    <button onclick="changeDisplayName()">Change Display Name</button><br><br>
-	<span>Dark Mode</span><input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} /><br><br>
+    <button onclick="changeDisplayName()">Change Display Name</button><br><hr>
+	<span>Dark Mode</span><input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} /><br><hr>
 	<h3>Profile Pic 🖼️*</h3><input type="file" id="profileChanger" accept="image/*" /><br><p>*Ask Oscar for help if needed.</p>
   `;
 
