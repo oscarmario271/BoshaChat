@@ -74,7 +74,7 @@
 	  background: #171717;
 	  color: #EDEDED;
 	}
-	body.light #inputArea input {
+	body.light # input {
 	  background: #EDEDED;
 	  color: #171717;
 	}
@@ -100,7 +100,7 @@
       margin: auto;
       text-align: center;
     }
-	#sendButton {
+	.sendButton {
 	  border: 2px solid;
 	  border-radius: 10px;
 	}
@@ -167,6 +167,10 @@ body.light .message {
   gap: 8px;
   margin: 2px 0;
 }
+.message-line img {
+  max-width: 100%;
+  height: auto;
+}
 
 .message-text {
   flex: 1;
@@ -192,7 +196,7 @@ body.light #loginBox h2 {
   color: #171717;
 }
 .profile-image {
-  height: 1em;
+  height: 3.25em;
   width: auto;
   vertical-align: middle;
   background: transparent;
@@ -239,8 +243,10 @@ body.light #loginBox h2 {
 	<div id="typingIndicator" style="padding:5px;color:gray;"></div>
 
     <div id="inputArea">
+	  <button class="sendButton" onclick="sendImage()">🖼️</button>
+	  <button class="sendButton" onclick="sendVideo()">🎥</button>
       <input id="messageInput" placeholder="Type message..." onkeydown="if(event.key==='Enter') sendMessage()">
-      <button id="sendButton" onclick="sendMessage()">Send</button>
+      <button class="sendButton" onclick="sendMessage()">Send</button>
     </div>
   </div>
 
@@ -398,6 +404,8 @@ return date.toLocaleString("en-GB", {
 }
 	
 window.loadChat = async function(chatId) {
+  const inputArea = document.getElementById("inputArea");
+  inputArea.style.display = "flex";
   currentChatId = chatId;
   messagesDiv.innerHTML = "";
 
@@ -431,11 +439,11 @@ for (const docSnap of snapshot.docs) {
     currentBubble.className = "message";
 
 	const profileImg = profile
-      ? `data:image/png;base64,${profile}`
+      ? `${profile}`
       : "res/profile.png";
 	  
     currentBubble.innerHTML = `
-      <div class="message-sender"><h3><img src="${profileImg}" class="profile-image"> ${name}</h3></div>
+      <div class="message-sender"><h2><img src="${profileImg}" class="profile-image"> ${name}</h2></div>
       <div class="message-lines"></div>
     `;
 
@@ -527,6 +535,30 @@ window.sendMessage = async function() {
   messageInput.value = "";
   stopTyping();
 }
+window.sendImage = async function() {
+  const fileSelector = document.createElement("input");
+  fileSelector.type = "file";
+  fileSelector.accept = "image/*";
+  fileSelector.multiple = false;
+
+  fileSelector.onchange = (event) => {
+    const file = event.target.files[0];
+	const reader = new FileReader();
+
+    reader.onload = async () => {
+      await addDoc(collection(db, "chats", currentChatId, "messages"), {
+        user: auth.currentUser.email,
+        text: `<img src="${reader.result}" />`
+        timestamp: serverTimestamp()
+      });
+    };
+
+    reader.readAsDataURL(file);
+  };
+}
+window.sendVideo = async function() {
+  alert("Coming soon!");
+}
 
 /* ---------------- TYPING SYSTEM ---------------- */
 
@@ -587,16 +619,18 @@ function watchTyping(chatId) {
 /* ---------------- SETTINGS PANEL ---------------- */
 
 window.openSettings = async function() {
+  const inputArea = document.getElementById("inputArea");
+  inputArea.style.display = "none";
   const snap = await getDoc(doc(db, "users", auth.currentUser.email));
   const darkMode = snap.data().darkMode;
   const checked = darkMode ? "checked" : "";
   currentChatId = "settingsPanel";
   messagesDiv.innerHTML = `
-    <h3>⚙ Settings</h3>
-    <button onclick="changeDisplayName()">Change Display Name</button>
-	<span>Dark Mode</span>
-	<input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} />
-	<input type="file" id="profileChanger" accept="image/png" />
+    <hr>
+    <h2>⚙ Settings</h2>
+    <button onclick="changeDisplayName()">Change Display Name</button><br><hr>
+	<span>Dark Mode</span><input type="checkbox" id="darkModeCheck" onclick="checkboxDarkMode()" ${checked} /><br><hr>
+	<h3>Profile Pic 🖼️*</h3><input type="file" id="profileChanger" accept="image/*" /><br><p>*Ask Oscar for help if needed.</p>
   `;
 
   setTimeout(() => {
@@ -607,10 +641,8 @@ window.openSettings = async function() {
       const reader = new FileReader();
 
       reader.onload = async () => {
-        const data = reader.result.split(",")[1];
-
         await updateDoc(doc(db, "users", auth.currentUser.email), {
-          profile: data
+          profile: reader.result
         });
       };
 
