@@ -548,7 +548,7 @@ window.sendImage = async function() {
     reader.onload = async () => {
       await addDoc(collection(db, "chats", currentChatId, "messages"), {
         user: auth.currentUser.email,
-        text: `<img src="${reader.result}" />`
+        text: `<img src="${reader.result}" />`,
         timestamp: serverTimestamp()
       });
     };
