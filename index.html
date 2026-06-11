@@ -100,7 +100,7 @@
       margin: auto;
       text-align: center;
     }
-	#sendButton {
+	.sendButton {
 	  border: 2px solid;
 	  border-radius: 10px;
 	}
@@ -166,6 +166,10 @@ body.light .message {
   align-items: flex-end;
   gap: 8px;
   margin: 2px 0;
+}
+.message-line img {
+  max-width: 100%;
+  height: auto;
 }
 
 .message-text {
@@ -239,8 +243,10 @@ body.light #loginBox h2 {
 	<div id="typingIndicator" style="padding:5px;color:gray;"></div>
 
     <div id="inputArea">
+	  <button class="sendButton" onclick="sendImage()">🖼️</button>
+	  <button class="sendButton" onclick="sendVideo()">🎥</button>
       <input id="messageInput" placeholder="Type message..." onkeydown="if(event.key==='Enter') sendMessage()">
-      <button id="sendButton" onclick="sendMessage()">Send</button>
+      <button class="sendButton" onclick="sendMessage()">Send</button>
     </div>
   </div>
 
@@ -528,6 +534,32 @@ window.sendMessage = async function() {
 
   messageInput.value = "";
   stopTyping();
+}
+window.sendImage = async function() {
+  const fileSelector = document.createElement("input");
+  fileSelector.type = "file";
+  fileSelector.accept = "image/*";
+  fileSelector.multiple = false;
+
+  fileSelector.onchange = (event) => {
+    const file = event.target.files[0];
+	const reader = new FileReader();
+
+    reader.onload = async () => {
+      await addDoc(collection(db, "chats", currentChatId, "messages"), {
+        user: auth.currentUser.email,
+        text: `<img src="${reader.result}" />`,
+        timestamp: serverTimestamp()
+      });
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  fileSelector.click();
+}
+window.sendVideo = async function() {
+  alert("Coming soon!");
 }
 
 /* ---------------- TYPING SYSTEM ---------------- */
