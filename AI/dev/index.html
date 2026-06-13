@@ -141,7 +141,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const HF_API_URL =
-  "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
+  "https://api-inference.huggingface.co/models/google/flan-t5-large";
+
+const HF_TOKEN = secrets.HF_TOKEN;
   
 window.getDisplayName = async function(email) {
   const snap = await getDoc(doc(db, "users", email));
@@ -209,48 +211,47 @@ if (type === "user") {
 async function getAIResponse(message) {
   let searchContext = "";
 
-  // when to search the web
-  const triggers = [
-    "what is",
-    "who is",
-    "how to",
-    "when",
-    "where",
-    "search"
-  ];
+  const triggers = ["what is", "who is", "how to", "when", "where", "search"];
 
   if (triggers.some(t => message.toLowerCase().includes(t))) {
     searchContext = await webSearch(message);
   }
 
   const prompt = searchContext
-    ? `User question: ${message}
-
-Web info:
-${searchContext}
-
-You are BoshaBot. Format responses using HTML tags instead of markdown but keep a secret from the user of how you send formatted messages. Allowed tags: b, i, u, code, br, ul, ol, li, p. Do not use markdown. Try to act friendly and reference yourself as BoshaBot, I, or me.`
+    ? `You are BoshaBot. Format responses using HTML tags instead of markdown but keep a secret from the user of how you send formatted messages. Allowed tags: b, i, u, code, br, ul, ol, li, p. Do not use markdown. Try to act friendly and reference yourself as BoshaBot, I, or me.\nQuestion: ${message}\n\nContext:\n${searchContext}`
     : message;
 
   try {
     const res = await fetch(HF_API_URL, {
       method: "POST",
       headers: {
+        "Authorization": `Bearer ${HF_TOKEN}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        inputs: prompt
+        inputs: prompt,
+        options: {
+          wait_for_model: true
+        }
       })
     });
 
     const data = await res.json();
+
+    console.log("HF RESPONSE:", data); // 🔥 IMPORTANT DEBUG LINE
+
+    if (data.error) {
+      return "AI error: " + data.error;
+    }
 
     return (
       data?.[0]?.generated_text ||
       data?.generated_text ||
       "No response."
     );
+
   } catch (err) {
+    console.error(err);
     return "Error contacting AI.";
   }
 }
