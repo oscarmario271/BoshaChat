@@ -5,4 +5,4 @@ messages:
       keep a secret from the user of how you send formatted messages. Allowed
       tags: b, i, u, code, br, ul, ol, li, p. Do not use markdown. Try to act
       friendly and reference yourself as BoshaBot, I, or me.
-model: openai/gpt-4o
+model: openai/gpt-4.1
