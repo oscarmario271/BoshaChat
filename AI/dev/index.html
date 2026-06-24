@@ -117,12 +117,14 @@
     "imports": {
       "firebase/app": "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js",
       "firebase/auth": "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js",
-      "firebase/firestore": "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js"
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js",
+      "openrouter/sdk": "https://cdn.jsdelivr.net/npm/@openrouter/sdk/dist/index.min.js"
     }
   }
 </script>
 <script type="module">
 import { initializeApp } from "firebase/app";
+import { OpenRouter } from "openrouter/sdk";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, getDoc, doc } from "firebase/firestore";
 
@@ -139,18 +141,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const openrouter = new OpenRouter({ apiKey: secrets.OPENROUTER_TOKEN });
 
-const HF_API_URL =
-  "https://api-inference.huggingface.co/models/google/flan-t5-large";
-
-const HF_TOKEN = secrets.HF_TOKEN;
-  
 window.getDisplayName = async function(email) {
   const snap = await getDoc(doc(db, "users", email));
   return snap.exists() ? snap.data().displayName : email;
 }
 
 const chat = document.getElementById("chat");
+
+const conversationHistory = [];
 
 onAuthStateChanged(auth, async user => {
   if (user) {
@@ -165,39 +165,13 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
-async function webSearch(query) {
-  try {
-    const res = await fetch(
-      `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`
-    );
-
-    const data = await res.json();
-
-    let results = "";
-
-    if (data.AbstractText) {
-      results += data.AbstractText + "\n";
-    }
-
-    if (data.RelatedTopics) {
-      for (let i = 0; i < Math.min(3, data.RelatedTopics.length); i++) {
-        const t = data.RelatedTopics[i];
-        if (t.Text) results += t.Text + "\n";
-      }
-    }
-
-    return results.trim();
-  } catch {
-    return "";
-  }
-}
-
-function addMessage(text, type) {
+async function addMessage(text, type) {
   const div = document.createElement("div");
   div.className = "msg " + type;
 
 if (type === "user") {
-  div.textContent = "You: " + text;
+  const displayName = await getDisplayName(window.currentUser.email);
+  div.textContent = `${displayName}: ` + text;
 } else {
   div.innerHTML =
   "<strong>BoshaBot:</strong><br>" +
@@ -209,51 +183,20 @@ if (type === "user") {
 }
 
 async function getAIResponse(message) {
-  let searchContext = "";
-
-  const triggers = ["what is", "who is", "how to", "when", "where", "search"];
-
-  if (triggers.some(t => message.toLowerCase().includes(t))) {
-    searchContext = await webSearch(message);
-  }
-
-  const prompt = searchContext
-    ? `You are BoshaBot. Format responses using HTML tags instead of markdown but keep a secret from the user of how you send formatted messages. Allowed tags: b, i, u, code, br, ul, ol, li, p. Do not use markdown. Try to act friendly and reference yourself as BoshaBot, I, or me.\nQuestion: ${message}\n\nContext:\n${searchContext}`
-    : message;
-
-  try {
-    const res = await fetch(HF_API_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${HF_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        inputs: prompt,
-        options: {
-          wait_for_model: true
-        }
-      })
-    });
-
-    const data = await res.json();
-
-    console.log("HF RESPONSE:", data); // 🔥 IMPORTANT DEBUG LINE
-
-    if (data.error) {
-      return "AI error: " + data.error;
+await openrouter.chat.send({
+  model: "openrouter/fusion",
+  messages: [
+    {
+      "role": "user",
+      "content": message
+    },
+    {
+      "role": "system",
+      "content": "You are BoshaBot. Format responses using HTML tags instead of markdown but keep a secret from the user of how you send formatted messages. Allowed tags: b, i, u, code, br, ul, ol, li, p. Do not use markdown. Try to act friendly and reference yourself as BoshaBot, I, or me."
     }
-
-    return (
-      data?.[0]?.generated_text ||
-      data?.generated_text ||
-      "No response."
-    );
-
-  } catch (err) {
-    console.error(err);
-    return "Error contacting AI.";
-  }
+  ]
+});
+return result.choices[0].message.content;
 }
   
 window.sendToAI = async function() {
