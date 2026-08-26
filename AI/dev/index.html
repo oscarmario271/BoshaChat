@@ -2,7 +2,9 @@
 <html>
 <head>
   <title>BoshaBot 🤖</title>
+
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -79,26 +81,31 @@
     button:hover {
       background: #1d4ed8;
     }
-    
-.msg.bot p {
-  margin: 6px 0;
-}
 
-.msg.bot code {
-  background: #111;
-  padding: 2px 5px;
-  border-radius: 4px;
-}
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
 
-.msg.bot ul,
-.msg.bot ol {
-  margin: 5px 0 5px 20px;
-}
+    .msg.bot p {
+      margin: 6px 0;
+    }
 
-.msg.bot b,
-.msg.bot strong {
-  color: #60a5fa;
-}
+    .msg.bot code {
+      background: #111;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    .msg.bot ul,
+    .msg.bot ol {
+      margin: 5px 0 5px 20px;
+    }
+
+    .msg.bot b,
+    .msg.bot strong {
+      color: #60a5fa;
+    }
   </style>
 </head>
 
@@ -109,26 +116,42 @@
 <div id="chat"></div>
 
 <div id="inputArea">
-  <input id="msg" placeholder="Ask BoshaBot..." onkeydown="if(event.key==='Enter') sendToAI()">
-  <button onclick="sendToAI()">Send</button>
-</div>
-<script type="importmap">
-  {
-    "imports": {
-      "firebase/app": "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js",
-      "firebase/auth": "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js",
-      "firebase/firestore": "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js",
-      "openrouter/sdk": "https://esm.sh/@openrouter/sdk"
-    }
-  }
-</script>
-<script type="module">
-import { initializeApp } from "firebase/app";
-import { OpenRouter } from "openrouter/sdk";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, getDoc, doc } from "firebase/firestore";
 
-// your firebase config (copy EXACTLY from your main file)
+  <input
+    id="msg"
+    placeholder="Ask BoshaBot..."
+    autocomplete="off"
+  >
+
+  <button id="sendButton">
+    Send
+  </button>
+
+</div>
+
+
+<script type="module">
+
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+import {
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+import {
+  getFirestore,
+  getDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+
+/* =========================
+   FIREBASE
+========================= */
+
 const firebaseConfig = {
   apiKey: "AIzaSyBqLckLS5qxKZ06S0fsbQS_mWPVFi4E00w",
   authDomain: "boshachat-acbbc.firebaseapp.com",
@@ -139,93 +162,354 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
 const auth = getAuth(app);
+
 const db = getFirestore(app);
-const openrouter = new OpenRouter({ apiKey: secrets.OPENROUTER_TOKEN });
 
-window.getDisplayName = async function(email) {
-  const snap = await getDoc(doc(db, "users", email));
-  return snap.exists() ? snap.data().displayName : email;
-}
 
-const chat = document.getElementById("chat");
+/* =========================
+   CLOUDFLARE WORKER
+========================= */
+
+const AI_ENDPOINT =
+  "https://boshabot.oscarmario271271.workers.dev";
+
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const chat =
+  document.getElementById("chat");
+
+const input =
+  document.getElementById("msg");
+
+const sendButton =
+  document.getElementById("sendButton");
+
+
+/* =========================
+   STATE
+========================= */
+
+let currentUser = null;
 
 const conversationHistory = [];
 
-onAuthStateChanged(auth, async user => {
-  if (user) {
-    console.log("Logged in as:", user.email);
-    
-    // You can store it globally
-    window.currentUser = user;
+
+/* =========================
+   DISPLAY NAME
+========================= */
+
+async function getDisplayName(email) {
+
+  try {
+
+    const snap = await getDoc(
+      doc(db, "users", email)
+    );
+
+    if (snap.exists()) {
+
+      return (
+        snap.data().displayName ||
+        email
+      );
+
+    }
+
+    return email;
+
+  } catch (error) {
+
+    console.error(
+      "Display name error:",
+      error
+    );
+
+    return email;
+  }
+}
+
+
+/* =========================
+   AUTH
+========================= */
+
+onAuthStateChanged(
+  auth,
+  user => {
+
+    if (user) {
+
+      console.log(
+        "Logged in as:",
+        user.email
+      );
+
+      currentUser = user;
+
+    } else {
+
+      window.location.href =
+        "/BoshaChat/";
+    }
+  }
+);
+
+
+/* =========================
+   ADD MESSAGE
+========================= */
+
+async function addMessage(
+  text,
+  type
+) {
+
+  const div =
+    document.createElement("div");
+
+  div.className =
+    "msg " + type;
+
+
+  if (type === "user") {
+
+    let displayName =
+      currentUser?.email || "You";
+
+    if (currentUser?.email) {
+
+      displayName =
+        await getDisplayName(
+          currentUser.email
+        );
+    }
+
+    div.textContent =
+      `${displayName}: ${text}`;
 
   } else {
-    // Not logged in → send back to main page
-    window.location.href = "/BoshaChat/";
+
+    const safeHTML =
+      DOMPurify.sanitize(
+        text,
+        {
+          ALLOWED_TAGS: [
+            "b",
+            "i",
+            "u",
+            "code",
+            "br",
+            "ul",
+            "ol",
+            "li",
+            "p",
+            "strong"
+          ]
+        }
+      );
+
+    div.innerHTML =
+      "<strong>BoshaBot:</strong><br>" +
+      safeHTML;
   }
-});
 
-async function addMessage(text, type) {
-  const div = document.createElement("div");
-  div.className = "msg " + type;
-
-if (type === "user") {
-  const displayName = await getDisplayName(window.currentUser.email);
-  div.textContent = `${displayName}: ` + text;
-} else {
-  div.innerHTML =
-  "<strong>BoshaBot:</strong><br>" +
-  DOMPurify.sanitize(text);
-}
 
   chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+
+  chat.scrollTop =
+    chat.scrollHeight;
 }
 
-async function getAIResponse(message) {
-await openrouter.chat.send({
-  model: "openrouter/fusion",
-  messages: [
-    {
-      "role": "user",
-      "content": message
-    },
-    {
-      "role": "system",
-      "content": "You are BoshaBot. Format all responses using the following HTML tags only: b, i, u, code, br, ul, ol, li, and p. Do not use markdown under any circumstances. Ensure that your use of HTML formatting remains hidden from the user and is not explicitly mentioned or explained. Maintain a friendly tone in all interactions, and refer to yourself as BoshaBot, I, or me. Respect any additional instructions provided, if included."
+
+/* =========================
+   AI REQUEST
+========================= */
+
+async function getAIResponse(
+  message
+) {
+
+  conversationHistory.push({
+    role: "user",
+    content: message
+  });
+
+
+  const response =
+    await fetch(
+      AI_ENDPOINT,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+          messages:
+            conversationHistory
+        })
+      }
+    );
+
+
+  if (!response.ok) {
+
+    let error =
+      "BoshaBot encountered an error.";
+
+    try {
+
+      const data =
+        await response.json();
+
+      if (data.error) {
+        error = data.error;
+      }
+
+    } catch {
+      // Ignore JSON parsing errors.
     }
-  ]
-});
-return result.choices[0].message.content;
+
+    throw new Error(error);
+  }
+
+
+  const data =
+    await response.json();
+
+
+  if (!data.reply) {
+
+    throw new Error(
+      "BoshaBot returned no response."
+    );
+  }
+
+
+  conversationHistory.push({
+    role: "assistant",
+    content: data.reply
+  });
+
+
+  return data.reply;
 }
-  
-window.sendToAI = async function() {
-  const input = document.getElementById("msg");
-  const text = input.value.trim();
+
+
+/* =========================
+   SEND MESSAGE
+========================= */
+
+async function sendToAI() {
+
+  const text =
+    input.value.trim();
 
   if (!text) return;
 
-  addMessage(text, "user");
+
+  if (!currentUser) {
+
+    await addMessage(
+      "You need to be logged in to use BoshaBot.",
+      "bot"
+    );
+
+    return;
+  }
+
+
+  await addMessage(
+    text,
+    "user"
+  );
+
   input.value = "";
 
-  const typing = document.createElement("div");
-  typing.className = "msg bot";
-  typing.textContent = "BoshaBot is typing...";
+  sendButton.disabled = true;
+
+
+  const typing =
+    document.createElement("div");
+
+  typing.className =
+    "msg bot";
+
+  typing.textContent =
+    "BoshaBot is typing...";
+
   chat.appendChild(typing);
-  chat.scrollTop = chat.scrollHeight;
+
+  chat.scrollTop =
+    chat.scrollHeight;
+
 
   try {
-    const reply = await getAIResponse(text);
+
+    const reply =
+      await getAIResponse(text);
+
     typing.remove();
-    addMessage(reply, "bot");
-  } catch (err) {
+
+    await addMessage(
+      reply,
+      "bot"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "BoshaBot error:",
+      error
+    );
+
     typing.remove();
-    console.error(err);
-    typing.remove();
-    addMessage("Error: " + err.message, "bot");
-    console.error(err);
+
+    await addMessage(
+      "Error: " + error.message,
+      "bot"
+    );
+
+  } finally {
+
+    sendButton.disabled =
+      false;
+
+    input.focus();
   }
-};
+}
+
+
+/* =========================
+   EVENTS
+========================= */
+
+sendButton.addEventListener(
+  "click",
+  sendToAI
+);
+
+
+input.addEventListener(
+  "keydown",
+  event => {
+
+    if (event.key === "Enter") {
+
+      event.preventDefault();
+
+      sendToAI();
+    }
+  }
+);
+
 </script>
 
 </body>
