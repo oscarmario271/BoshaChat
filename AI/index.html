@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
   <title>BoshaBot 🤖</title>
 
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 
   <style>
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -68,6 +71,11 @@
       color: white;
     }
 
+    #imageInput {
+      margin-left: 10px;
+      color: white;
+    }
+
     button {
       margin-left: 10px;
       padding: 10px 15px;
@@ -106,21 +114,40 @@
     .msg.bot strong {
       color: #60a5fa;
     }
+
   </style>
+
 </head>
+
 
 <body>
 
-<header>🤖 BoshaBot</header>
+
+<header>
+  🤖 BoshaBot
+</header>
+
 
 <div id="chat"></div>
 
+
 <div id="inputArea">
+
+  <button id="imageButton" type="button">
+    🖼️ Image
+  </button>
 
   <input
     id="msg"
     placeholder="Ask BoshaBot..."
-    autocomplete="off"
+  >
+
+  <input
+    type="file"
+    id="imageInput"
+    accept="image/png,image/jpeg,image/webp"
+    multiple
+    hidden
   >
 
   <button id="sendButton">
@@ -131,6 +158,11 @@
 
 
 <script type="module">
+
+
+/* =========================
+   FIREBASE
+========================= */
 
 import {
   initializeApp
@@ -148,24 +180,37 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 
-/* =========================
-   FIREBASE
-========================= */
-
 const firebaseConfig = {
-  apiKey: "AIzaSyBqLckLS5qxKZ06S0fsbQS_mWPVFi4E00w",
-  authDomain: "boshachat-acbbc.firebaseapp.com",
-  projectId: "boshachat-acbbc",
-  storageBucket: "boshachat-acbbc.firebasestorage.app",
-  messagingSenderId: "732701616574",
-  appId: "1:732701616574:web:abeb808acd5d5bbb3a71ef"
+
+  apiKey:
+    "AIzaSyBqLckLS5qxKZ06S0fsbQS_mWPVFi4E00w",
+
+  authDomain:
+    "boshachat-acbbc.firebaseapp.com",
+
+  projectId:
+    "boshachat-acbbc",
+
+  storageBucket:
+    "boshachat-acbbc.firebasestorage.app",
+
+  messagingSenderId:
+    "732701616574",
+
+  appId:
+    "1:732701616574:web:abeb808acd5d5bbb3a71ef"
+
 };
 
-const app = initializeApp(firebaseConfig);
 
-const auth = getAuth(app);
+const app =
+  initializeApp(firebaseConfig);
 
-const db = getFirestore(app);
+const auth =
+  getAuth(app);
+
+const db =
+  getFirestore(app);
 
 
 /* =========================
@@ -189,6 +234,9 @@ const input =
 const sendButton =
   document.getElementById("sendButton");
 
+const imageInput =
+  document.getElementById("imageInput");
+
 
 /* =========================
    STATE
@@ -207,9 +255,10 @@ async function getDisplayName(email) {
 
   try {
 
-    const snap = await getDoc(
-      doc(db, "users", email)
-    );
+    const snap =
+      await getDoc(
+        doc(db, "users", email)
+      );
 
     if (snap.exists()) {
 
@@ -255,7 +304,9 @@ onAuthStateChanged(
 
       window.location.href =
         "/BoshaChat/";
+
     }
+
   }
 );
 
@@ -264,16 +315,11 @@ onAuthStateChanged(
    ADD MESSAGE
 ========================= */
 
-async function addMessage(
-  text,
-  type
-) {
+async function addMessage(text, type, images = []) {
 
-  const div =
-    document.createElement("div");
+  const div = document.createElement("div");
 
-  div.className =
-    "msg " + type;
+  div.className = "msg " + type;
 
 
   if (type === "user") {
@@ -282,15 +328,51 @@ async function addMessage(
       currentUser?.email || "You";
 
     if (currentUser?.email) {
-
       displayName =
         await getDisplayName(
           currentUser.email
         );
     }
 
-    div.textContent =
+
+    /*
+     * Add images ABOVE the text.
+     */
+
+    if (images.length > 0) {
+
+      for (const image of images) {
+
+        const img =
+          document.createElement("img");
+
+        img.src = image;
+
+        img.style.display = "block";
+        img.style.maxWidth = "300px";
+        img.style.maxHeight = "300px";
+        img.style.borderRadius = "10px";
+        img.style.marginBottom = "8px";
+
+        div.appendChild(img);
+
+      }
+
+    }
+
+
+    /*
+     * Add the user's message.
+     */
+
+    const textElement =
+      document.createElement("div");
+
+    textElement.textContent =
       `${displayName}: ${text}`;
+
+    div.appendChild(textElement);
+
 
   } else {
 
@@ -302,6 +384,7 @@ async function addMessage(
             "b",
             "i",
             "u",
+            "a",
             "code",
             "br",
             "ul",
@@ -313,9 +396,11 @@ async function addMessage(
         }
       );
 
+
     div.innerHTML =
       "<strong>BoshaBot:</strong><br>" +
       safeHTML;
+
   }
 
 
@@ -327,16 +412,55 @@ async function addMessage(
 
 
 /* =========================
+   FILE → DATA URL
+========================= */
+
+function fileToDataURL(file) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const reader =
+        new FileReader();
+
+
+      reader.onload =
+        () => resolve(
+          reader.result
+        );
+
+
+      reader.onerror =
+        () => reject(
+          new Error(
+            "Could not read image."
+          )
+        );
+
+
+      reader.readAsDataURL(file);
+
+    }
+  );
+
+}
+
+
+/* =========================
    AI REQUEST
 ========================= */
 
 async function getAIResponse(
-  message
+  message,
+  images
 ) {
 
   conversationHistory.push({
+
     role: "user",
+
     content: message
+
   });
 
 
@@ -344,17 +468,26 @@ async function getAIResponse(
     await fetch(
       AI_ENDPOINT,
       {
+
         method: "POST",
 
         headers: {
+
           "Content-Type":
             "application/json"
+
         },
 
         body: JSON.stringify({
+
           messages:
-            conversationHistory
+            conversationHistory,
+
+          images:
+            images
+
         })
+
       }
     );
 
@@ -364,20 +497,29 @@ async function getAIResponse(
     let error =
       "BoshaBot encountered an error.";
 
+
     try {
 
       const data =
         await response.json();
 
+
       if (data.error) {
-        error = data.error;
+
+        error =
+          data.error;
+
       }
 
     } catch {
+
       // Ignore JSON parsing errors.
+
     }
 
+
     throw new Error(error);
+
   }
 
 
@@ -390,16 +532,22 @@ async function getAIResponse(
     throw new Error(
       "BoshaBot returned no response."
     );
+
   }
 
 
   conversationHistory.push({
+
     role: "assistant",
-    content: data.reply
+
+    content:
+      data.reply
+
   });
 
 
   return data.reply;
+
 }
 
 
@@ -412,8 +560,30 @@ async function sendToAI() {
   const text =
     input.value.trim();
 
-  if (!text) return;
 
+  /*
+   * Allow an image without text.
+   */
+
+  const files =
+    Array.from(
+      imageInput.files
+    );
+
+
+  if (
+    !text &&
+    files.length === 0
+  ) {
+
+    return;
+
+  }
+
+
+  /* =========================
+     AUTH CHECK
+  ========================= */
 
   if (!currentUser) {
 
@@ -423,45 +593,144 @@ async function sendToAI() {
     );
 
     return;
+
   }
 
 
+  /* =========================
+     IMAGE LIMIT
+  ========================= */
+
+  if (files.length > 3) {
+
+    await addMessage(
+      "You can attach up to 3 images at once.",
+      "bot"
+    );
+
+    return;
+
+  }
+
+
+  /* =========================
+     CONVERT IMAGES
+  ========================= */
+
+  const images = [];
+
+
+  for (const file of files) {
+
+    if (
+      !file.type.startsWith(
+        "image/"
+      )
+    ) {
+
+      continue;
+
+    }
+
+
+    /*
+     * 20 MB per image limit.
+     */
+
+    if (
+      file.size >
+      20 * 1024 * 1024
+    ) {
+
+      await addMessage(
+        `${file.name} is too large. Maximum size is 20 MB.`,
+        "bot"
+      );
+
+      return;
+
+    }
+
+
+    const image =
+      await fileToDataURL(file);
+
+
+    images.push(image);
+
+  }
+
+
+  /* =========================
+     DISPLAY USER MESSAGE
+  ========================= */
+
+  const displayText =
+    text ||
+    "What can you tell me about this image?";
+
+
   await addMessage(
-    text,
-    "user"
+    displayText,
+    "user",
+    images
   );
 
+
   input.value = "";
+
+  imageInput.value = "";
 
   sendButton.disabled = true;
 
 
+  /* =========================
+     TYPING MESSAGE
+  ========================= */
+
   const typing =
     document.createElement("div");
+
 
   typing.className =
     "msg bot";
 
-  typing.textContent =
-    "BoshaBot is typing...";
 
-  chat.appendChild(typing);
+  typing.textContent =
+    "BoshaBot is thinking...";
+
+
+  chat.appendChild(
+    typing
+  );
+
 
   chat.scrollTop =
     chat.scrollHeight;
 
 
+  /* =========================
+     ASK BOSHABOT
+  ========================= */
+
   try {
 
     const reply =
-      await getAIResponse(text);
+      await getAIResponse(
+        text ||
+        "What can you tell me about this image?",
+        images
+      );
+
 
     typing.remove();
+
 
     await addMessage(
       reply,
       "bot"
     );
+
 
   } catch (error) {
 
@@ -470,10 +739,13 @@ async function sendToAI() {
       error
     );
 
+
     typing.remove();
 
+
     await addMessage(
-      "Error: " + error.message,
+      "Error: " +
+      error.message,
       "bot"
     );
 
@@ -483,7 +755,9 @@ async function sendToAI() {
       false;
 
     input.focus();
+
   }
+
 }
 
 
@@ -496,21 +770,36 @@ sendButton.addEventListener(
   sendToAI
 );
 
+const imageButton =
+  document.getElementById("imageButton");
 
+imageButton.addEventListener(
+  "click",
+  () => {
+    imageInput.click();
+  }
+);
+  
 input.addEventListener(
   "keydown",
   event => {
 
-    if (event.key === "Enter") {
+    if (
+      event.key === "Enter"
+    ) {
 
       event.preventDefault();
 
       sendToAI();
+
     }
+
   }
 );
+
 
 </script>
 
 </body>
+
 </html>
