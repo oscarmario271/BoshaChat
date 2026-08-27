@@ -133,6 +133,10 @@
 
 <div id="inputArea">
 
+  <button id="imageButton" type="button">
+    🖼️ Image
+  </button>
+
   <input
     id="msg"
     placeholder="Ask BoshaBot..."
@@ -143,6 +147,7 @@
     id="imageInput"
     accept="image/png,image/jpeg,image/webp"
     multiple
+    hidden
   >
 
   <button id="sendButton">
@@ -310,16 +315,11 @@ onAuthStateChanged(
    ADD MESSAGE
 ========================= */
 
-async function addMessage(
-  text,
-  type
-) {
+async function addMessage(text, type, images = []) {
 
-  const div =
-    document.createElement("div");
+  const div = document.createElement("div");
 
-  div.className =
-    "msg " + type;
+  div.className = "msg " + type;
 
 
   if (type === "user") {
@@ -327,19 +327,52 @@ async function addMessage(
     let displayName =
       currentUser?.email || "You";
 
-
     if (currentUser?.email) {
-
       displayName =
         await getDisplayName(
           currentUser.email
         );
+    }
+
+
+    /*
+     * Add images ABOVE the text.
+     */
+
+    if (images.length > 0) {
+
+      for (const image of images) {
+
+        const img =
+          document.createElement("img");
+
+        img.src = image;
+
+        img.style.display = "block";
+        img.style.maxWidth = "300px";
+        img.style.maxHeight = "300px";
+        img.style.borderRadius = "10px";
+        img.style.marginBottom = "8px";
+
+        div.appendChild(img);
+
+      }
 
     }
 
 
-    div.textContent =
+    /*
+     * Add the user's message.
+     */
+
+    const textElement =
+      document.createElement("div");
+
+    textElement.textContent =
       `${displayName}: ${text}`;
+
+    div.appendChild(textElement);
+
 
   } else {
 
@@ -351,6 +384,7 @@ async function addMessage(
             "b",
             "i",
             "u",
+            "a",
             "code",
             "br",
             "ul",
@@ -374,7 +408,6 @@ async function addMessage(
 
   chat.scrollTop =
     chat.scrollHeight;
-
 }
 
 
@@ -639,7 +672,8 @@ async function sendToAI() {
 
   await addMessage(
     displayText,
-    "user"
+    "user",
+    images
   );
 
 
@@ -736,7 +770,16 @@ sendButton.addEventListener(
   sendToAI
 );
 
+const imageButton =
+  document.getElementById("imageButton");
 
+imageButton.addEventListener(
+  "click",
+  () => {
+    imageInput.click();
+  }
+);
+  
 input.addEventListener(
   "keydown",
   event => {
