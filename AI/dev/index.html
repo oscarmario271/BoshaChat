@@ -466,7 +466,7 @@ async function getAIResponse(
         body: JSON.stringify({
 
           username:
-            getDisplayName(currentUser.email),
+            await getDisplayName(currentUser.email),
 
           messages:
             conversationHistory,
