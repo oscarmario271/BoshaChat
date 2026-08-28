@@ -273,6 +273,8 @@ if (!response.ok) {
 }
 
 const firebaseConfig = await response.json();
+alert(firebaseConfig);
+alert(await response.json());
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
