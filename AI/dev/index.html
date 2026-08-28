@@ -179,29 +179,13 @@ import {
   doc
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
+const response = await fetch("https://boshachatdata.oscarmario271271.workers.dev");
 
-const firebaseConfig = {
+if (!response.ok) {
+  throw new Error(`Request failed: ${response.status}`);
+}
 
-  apiKey:
-    "AIzaSyBqLckLS5qxKZ06S0fsbQS_mWPVFi4E00w",
-
-  authDomain:
-    "boshachat-acbbc.firebaseapp.com",
-
-  projectId:
-    "boshachat-acbbc",
-
-  storageBucket:
-    "boshachat-acbbc.firebasestorage.app",
-
-  messagingSenderId:
-    "732701616574",
-
-  appId:
-    "1:732701616574:web:abeb808acd5d5bbb3a71ef"
-
-};
-
+const firebaseConfig = await response.json();
 
 const app =
   initializeApp(firebaseConfig);
