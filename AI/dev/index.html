@@ -683,165 +683,145 @@ async function loadBoshaBotChats() {
      LOAD CHAT
   ========================= */
 
-  async function loadBoshaBotChat() {
+async function loadBoshaBotChat() {
 
-    if (!currentUser) {
-      return;
-    }
+  if (!currentUser) {
+    return;
+  }
 
+  if (!currentChatId) {
 
-    if (!currentChatId) {
+    chatStatus.textContent = "No chat selected.";
 
-      chatStatus.textContent =
-        "No chat selected.";
+    await addMessage(
+      "No BoshaBot chat was selected. Open a BoshaBot chat first.",
+      "bot"
+    );
+
+    return;
+  }
+
+  chatStatus.textContent = "Loading chat...";
+
+  conversationHistory.length = 0;
+  chat.innerHTML = "";
+
+  try {
+
+    // Get the chat document so we can get its name
+    const chatRef = doc(
+      db,
+      "users",
+      currentUser.email,
+      "boshaBot",
+      currentChatId
+    );
+
+    const chatSnapshot = await getDoc(chatRef);
+
+    if (!chatSnapshot.exists()) {
+
+      chatStatus.textContent = "Chat not found.";
 
       await addMessage(
-        "No BoshaBot chat was selected. Open a BoshaBot chat first.",
+        "This BoshaBot chat could not be found.",
         "bot"
       );
 
       return;
-
     }
 
+    const chatData = chatSnapshot.data();
 
+    const chatName =
+      chatData.name || "Unnamed Chat";
+
+
+    // Display the chat NAME instead of the ID
     chatStatus.textContent =
-      "Loading chat...";
+      `Chat: ${chatName}`;
 
 
-    conversationHistory.length =
-      0;
+    // Get the messages collection
+    const messagesRef = collection(
+      db,
+      "users",
+      currentUser.email,
+      "boshaBot",
+      currentChatId,
+      "messages"
+    );
 
-    chat.innerHTML =
-      "";
+    const messagesQuery = query(
+      messagesRef,
+      orderBy("timestamp", "asc")
+    );
 
-
-    try {
-
-      /*
-       * users/<email>/boshaBot/<chatId>/messages
-       */
-
-      const messagesRef =
-        collection(
-          db,
-          "users",
-          currentUser.email,
-          "boshaBot",
-          currentChatId,
-          "messages"
-        );
+    const snapshot = await getDocs(messagesQuery);
 
 
-      const messagesQuery =
-        query(
-          messagesRef,
-          orderBy(
-            "timestamp",
-            "asc"
-          )
-        );
+    // Rebuild the conversation
+    for (const messageDoc of snapshot.docs) {
 
+      const message = messageDoc.data();
 
-      const snapshot =
-        await getDocs(
-          messagesQuery
-        );
-
-
-      for (
-        const messageDoc
-        of snapshot.docs
+      if (
+        message.role !== "user" &&
+        message.role !== "assistant"
       ) {
-
-        const message =
-          messageDoc.data();
-
-
-        if (
-          message.role !== "user" &&
-          message.role !== "assistant"
-        ) {
-
-          continue;
-
-        }
-
-
-        const content =
-          message.content || "";
-
-
-        /*
-         * Rebuild conversation history.
-         */
-
-        conversationHistory.push({
-
-          role:
-            message.role,
-
-          content:
-            content
-
-        });
-
-
-        /*
-         * Rebuild visible messages.
-         */
-
-        if (
-          message.role === "user"
-        ) {
-
-          await addMessage(
-            content,
-            "user",
-            message.images || []
-          );
-
-        } else {
-
-          await addMessage(
-            content,
-            "bot"
-          );
-
-        }
-
+        continue;
       }
 
-
-      chatStatus.textContent =
-        `Chat: ${currentChatId}`;
-
-
-      chat.scrollTop =
-        chat.scrollHeight;
+      const content =
+        message.content || "";
 
 
-    } catch (error) {
-
-      console.error(
-        "Could not load BoshaBot chat:",
-        error
-      );
-
-
-      chatStatus.textContent =
-        "Failed to load chat.";
+      // Add message to AI conversation history
+      conversationHistory.push({
+        role: message.role,
+        content: content
+      });
 
 
-      await addMessage(
-        "Could not load this chat: " +
-        error.message,
-        "bot"
-      );
+      // Display message in the UI
+      if (message.role === "user") {
 
+        await addMessage(
+          content,
+          "user",
+          message.images || []
+        );
+
+      } else {
+
+        await addMessage(
+          content,
+          "bot"
+        );
+
+      }
     }
 
+
+    chat.scrollTop = chat.scrollHeight;
+
+  } catch (error) {
+
+    console.error(
+      "Could not load BoshaBot chat:",
+      error
+    );
+
+    chatStatus.textContent =
+      "Failed to load chat.";
+
+    await addMessage(
+      "Could not load this chat: " +
+      error.message,
+      "bot"
+    );
   }
+}
 
 
   /* =========================
