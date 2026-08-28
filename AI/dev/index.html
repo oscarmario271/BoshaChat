@@ -137,8 +137,15 @@
 
 <header>
   🤖 BoshaBot
-</header>
+  <button id="loadChatButton" type="button">
+    📂 Load Chat
+  </button>
 
+  <button id="newChatButton" type="button">
+    ➕ New Chat
+  </button>
+</header>
+  
 <div id="chatStatus">
   Loading chat...
 </div>
@@ -295,6 +302,161 @@
    * boshabot.html?chat=abc123
    */
 
+async function createBoshaBotChat() {
+
+  if (!currentUser) {
+    throw new Error("You must be logged in.");
+  }
+
+  const chatName =
+    prompt("What would you like to name this chat?");
+
+  if (chatName === null) {
+    return;
+  }
+
+  const trimmedName =
+    chatName.trim();
+
+  if (!trimmedName) {
+    alert("Please enter a chat name.");
+    return;
+  }
+
+  if (trimmedName.length > 100) {
+    alert("Chat names can be up to 100 characters.");
+    return;
+  }
+
+  const chatsRef =
+    collection(
+      db,
+      "users",
+      currentUser.email,
+      "boshaBot"
+    );
+
+  const newChat =
+    await addDoc(
+      chatsRef,
+      {
+        name: trimmedName,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }
+    );
+
+  /*
+   * Open the newly created chat.
+   */
+
+  window.location.href =
+    `${window.location.pathname}?chat=${encodeURIComponent(newChat.id)}`;
+}
+
+async function loadBoshaBotChats() {
+
+  if (!currentUser) {
+    return;
+  }
+
+  const chatsRef =
+    collection(
+      db,
+      "users",
+      currentUser.email,
+      "boshaBot"
+    );
+
+  const chatsQuery =
+    query(
+      chatsRef,
+      orderBy(
+        "createdAt",
+        "desc"
+      )
+    );
+
+  const snapshot =
+    await getDocs(chatsQuery);
+
+  if (snapshot.empty) {
+
+    alert(
+      "You don't have any BoshaBot chats yet."
+    );
+
+    return;
+  }
+
+  const chats = [];
+
+  snapshot.forEach(
+    chatDoc => {
+
+      const data =
+        chatDoc.data();
+
+      chats.push({
+        id: chatDoc.id,
+        name:
+          data.name ||
+          "Unnamed Chat"
+      });
+
+    }
+  );
+
+  /*
+   * Make a simple numbered list.
+   */
+
+  let message =
+    "Choose a chat:\n\n";
+
+  chats.forEach(
+    (chat, index) => {
+
+      message +=
+        `${index + 1}. ${chat.name}\n`;
+
+    }
+  );
+
+  const choice =
+    prompt(message);
+
+  if (choice === null) {
+    return;
+  }
+
+  const index =
+    Number(choice) - 1;
+
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= chats.length
+  ) {
+
+    alert(
+      "Invalid chat selection."
+    );
+
+    return;
+  }
+
+  const selectedChat =
+    chats[index];
+
+  /*
+   * Open selected chat.
+   */
+
+  window.location.href =
+    `${window.location.pathname}?chat=${encodeURIComponent(selectedChat.id)}`;
+}
+  
   const urlParams =
     new URLSearchParams(
       window.location.search
@@ -1204,6 +1366,20 @@
       }
 
     }
+  );
+
+  document
+  .getElementById("newChatButton")
+  .addEventListener(
+    "click",
+    createBoshaBotChat
+  );
+
+document
+  .getElementById("loadChatButton")
+  .addEventListener(
+    "click",
+    loadBoshaBotChats
   );
 
 
