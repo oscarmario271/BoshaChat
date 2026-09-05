@@ -563,7 +563,7 @@ window.sendBitmoji = async function() {
 
   await addDoc(collection(db, "chats", currentChatId, "messages"), {
     user: auth.currentUser.email,
-    text: `<img src="${bitmojiUrl}" />`,
+    text: `<img src="${bitmojiUrl}" style="width:45%;" />`,
 	timestamp: serverTimestamp()
   });
 }
