@@ -244,7 +244,7 @@ body.light #loginBox h2 {
 
     <div id="inputArea">
 	  <button class="sendButton" onclick="sendImage()">🖼️</button>
-	  <button class="sendButton" onclick="sendVideo()">🎥</button>
+	  <button class="sendButton" onclick="sendBitmoji()"><img src="https://www.bitmoji.com/favicon/e0636a5c.favicon-152.cache.png" style="height:1em; width:auto;" /></button>
       <input id="messageInput" placeholder="Type message..." onkeydown="if(event.key==='Enter') sendMessage()">
       <button class="sendButton" onclick="sendMessage()">Send</button>
     </div>
@@ -557,8 +557,15 @@ window.sendImage = async function() {
 
   fileSelector.click();
 }
-window.sendVideo = async function() {
-  alert("Coming soon!");
+window.sendBitmoji = async function() {
+  const bitmojiUrl = prompt("Drag your bitmoji here:");
+  if (!bitmojiUrl) return;
+
+  await addDoc(collection(db, "chats", currentChatId, "messages"), {
+    user: auth.currentUser.email,
+    text: `<img src="${bitmojiUrl}" />`,
+	timestamp: serverTimestamp()
+  });
 }
 
 /* ---------------- TYPING SYSTEM ---------------- */
